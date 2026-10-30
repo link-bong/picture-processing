@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>印迹 Studio · 原创拼图与防盗水印工作台</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-checker-1: #f1f5f9;
+      --bg-checker-2: #e2e8f0;
+    }
+    .dark {
+      --bg-checker-1: #1e293b;
+      --bg-checker-2: #0f172a;
+    }
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .checkerboard {
+      background-color: var(--bg-checker-1);
+      background-image:
+        linear-gradient(45deg, var(--bg-checker-2) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--bg-checker-2) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--bg-checker-2) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--bg-checker-2) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    /* Custom slim scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.6);
+    }
+    input[type="range"] {
+      accent-color: #4f46e5;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="h-14 bg-white/90 backdrop-blur border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-indigo-200">
+        印
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-semibold text-slate-900 text-sm sm:text-base tracking-tight">印迹 Studio</h1>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">原创无损防盗工作台</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preset Quick Pills -->
+    <div class="hidden xl:flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200/70">
+      <span class="text-xs text-slate-500 px-2 font-medium">一键预设：</span>
+      <button type="button" id="presetCommissionBtn" class="text-xs px-2.5 py-1 rounded-md bg-white text-slate-700 shadow-sm font-medium hover:text-indigo-600 transition">🎨 约稿展示防盗</button>
+      <button type="button" id="presetMerchBtn" class="text-xs px-2.5 py-1 rounded-md text-slate-600 hover:bg-white/60 hover:text-indigo-600 transition">✨ 谷圈/手作实拍</button>
+      <button type="button" id="presetComicBtn" class="text-xs px-2.5 py-1 rounded-md text-slate-600 hover:bg-white/60 hover:text-indigo-600 transition">📜 条漫无缝长图</button>
+      <button type="button" id="presetGridBtn" class="text-xs px-2.5 py-1 rounded-md text-slate-600 hover:bg-white/60 hover:text-indigo-600 transition">🧩 小红书圆角宫格</button>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center gap-2">
+      <button type="button" id="loadSampleBtn" class="text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition flex items-center gap-1.5 shadow-sm">
+        <span>🖼️ 加载示例作品</span>
+      </button>
+      <button type="button" id="openExportModalBtn" class="text-xs sm:text-sm px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition flex items-center gap-1.5 shadow-sm shadow-indigo-200">
+        <span>⬇️ 无损导出</span>
+        <span id="exportBadgeCount" class="px-1.5 py-0.2 bg-indigo-500 rounded text-[11px]">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-3.5rem)]">
+
+    <!-- Left Column: Image Queue & Upload (3 cols on lg) -->
+    <aside class="lg:col-span-3 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col max-h-[calc(100vh-3.5rem)]">
+      <div class="p-4 border-b border-slate-100">
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">1. 素材队列 (<span id="queueCountText">0</span>)</h2>
+          <div class="flex items-center gap-1">
+            <button type="button" id="reverseOrderBtn" class="text-xs text-slate-500 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-slate-100 transition" title="倒序排列">⇅ 倒序</button>
+            <button type="button" id="clearAllBtn" class="text-xs text-rose-500 hover:text-rose-600 px-1.5 py-0.5 rounded hover:bg-rose-50 transition">清空</button>
+          </div>
+        </div>
+
+        <!-- Dropzone -->
+        <label for="imageUploadInput" id="dropzoneArea" class="group cursor-pointer border-2 border-dashed border-slate-200 hover:border-indigo-500 bg-slate-50/70 hover:bg-indigo-50/30 rounded-xl p-4 flex flex-col items-center justify-center text-center transition">
+          <div class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1.5 group-hover:scale-105 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          </div>
+          <p class="text-xs font-medium text-slate-700">点击或拖拽上传多张图片</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">支持 PNG / JPG / WebP · 全程本地无损处理</p>
+          <input id="imageUploadInput" type="file" accept="image/*" multiple class="hidden" />
+        </label>
+      </div>
+
+      <!-- Mode Switcher: Stitch vs Batch Single -->
+      <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-2">
+        <span class="text-xs font-medium text-slate-600">工作模式</span>
+        <div class="inline-flex rounded-lg bg-slate-200/80 p-0.5 text-xs">
+          <button type="button" id="modeStitchBtn" class="px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-sm font-medium transition">多图拼接</button>
+          <button type="button" id="modeBatchBtn" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 font-medium transition">单图批量打码</button>
+        </div>
+      </div>
+
+      <!-- Image List -->
+      <div id="imageQueueContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Bottom Resolution Info -->
+      <div class="p-3 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+        <span>🛡️ 原图级 Canvas 渲染</span>
+        <span id="canvasResolutionBadge" class="font-mono text-slate-700 font-medium">0 × 0 px</span>
+      </div>
+    </aside>
+
+    <!-- Center Column: Interactive Live Canvas Preview (5 cols on lg) -->
+    <section class="lg:col-span-5 flex flex-col bg-slate-100/70 relative overflow-hidden min-h-[420px] max-h-[calc(100vh-3.5rem)]">
+      <!-- Top Preview Toolbar -->
+      <div class="h-11 px-4 bg-white/80 backdrop-blur border-b border-slate-200/80 flex items-center justify-between gap-2 z-10">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium text-slate-500" id="previewModeLabel">实时预览 · 拼接总图</span>
+          <div id="batchPagerControls" class="hidden items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+            <button type="button" id="prevImageBtn" class="text-xs text-slate-600 hover:text-indigo-600 px-1">◀</button>
+            <span id="batchCurrentIndexText" class="text-xs font-mono text-slate-700">1/1</span>
+            <button type="button" id="nextImageBtn" class="text-xs text-slate-600 hover:text-indigo-600 px-1">▶</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="zoomOutBtn" class="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600" title="缩小预览">－</button>
+          <span id="zoomLevelText" class="text-xs font-mono text-slate-600 w-12 text-center">自适应</span>
+          <button type="button" id="zoomInBtn" class="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600" title="放大预览">＋</button>
+          <button type="button" id="zoomFitBtn" class="px-2 py-1 text-xs rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600">重置</button>
+          <button type="button" id="holdCompareBtn" class="px-2.5 py-1 text-xs rounded border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 font-medium select-none">👁️ 按住对比原图</button>
+        </div>
+      </div>
+
+      <!-- Canvas Viewport -->
+      <div id="canvasViewport" class="flex-1 checkerboard overflow-auto flex items-center justify-center p-6 relative">
+        <div id="canvasWrapper" class="relative transition-transform duration-150 ease-out shadow-xl rounded-sm bg-transparent">
+          <canvas id="mainPreviewCanvas" class="block max-w-full max-h-[calc(100vh-12rem)] w-auto h-auto"></canvas>
+        </div>
+      </div>
+
+      <!-- Quick Preset Bar for Mobile/Tablet -->
+      <div class="xl:hidden px-3 py-2 bg-white border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto">
+        <span class="text-[11px] text-slate-400 shrink-0">预设：</span>
+        <button type="button" id="mobilePresetCommBtn" class="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 shrink-0">🎨 约稿展示</button>
+        <button type="button" id="mobilePresetMerchBtn" class="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 shrink-0">✨ 谷圈实拍</button>
+        <button type="button" id="mobilePresetComicBtn" class="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 shrink-0">📜 条漫长图</button>
+        <button type="button" id="mobilePresetGridBtn" class="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 shrink-0">🧩 圆角宫格</button>
+      </div>
+    </section>
+
+    <!-- Right Column: Parameter Inspector Tabs (4 cols on lg) -->
+    <aside class="lg:col-span-4 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col max-h-[calc(100vh-3.5rem)]">
+      <!-- Inspector Tab Bar -->
+      <div class="grid grid-cols-3 border-b border-slate-200 bg-slate-50/60 p-1 gap-1">
+        <button type="button" id="tabStitchBtn" class="py-2 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition">
+          1. 拼接与排版
+        </button>
+        <button type="button" id="tabWatermarkBtn" class="py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">
+          2. 原创水印
+        </button>
+        <button type="button" id="tabPatternBtn" class="py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">
+          3. 底纹与防盗
+        </button>
+      </div>
+
+      <!-- Tab Panels Container -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-5">
+
+        <!-- PANEL 1: STITCH & LAYOUT -->
+        <div id="panelStitch" class="space-y-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-2">拼接方向与布局方式</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button type="button" data-layout="vertical" class="layout-btn px-3 py-2.5 rounded-xl border border-indigo-600 bg-indigo-50/60 text-indigo-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>⬇️ 纵向长图</span>
+                <span class="text-[10px] text-slate-400">条漫/长图展示</span>
+              </button>
+              <button type="button" data-layout="horizontal" class="layout-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>➡️ 横向画卷</span>
+                <span class="text-[10px] text-slate-400">横屏拼接对比</span>
+              </button>
+              <button type="button" data-layout="grid2" class="layout-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>⊞ 双列宫格</span>
+                <span class="text-[10px] text-slate-400">2列自动换行</span>
+              </button>
+              <button type="button" data-layout="grid3" class="layout-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>☷ 三列九宫格</span>
+                <span class="text-[10px] text-slate-400">经典3列排版</span>
+              </button>
+              <button type="button" data-layout="subtitle" class="layout-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>🎬 台词字幕拼</span>
+                <span class="text-[10px] text-slate-400">首图全貌+底部截帧</span>
+              </button>
+              <button type="button" data-layout="single" class="layout-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium flex flex-col items-center gap-1 transition">
+                <span>🗂️ 独立单图</span>
+                <span class="text-[10px] text-slate-400">不拼接/批量加码</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Subtitle Crop Ratio (Only visible when layout === subtitle) -->
+          <div id="subtitleCropControl" class="hidden p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="font-medium text-indigo-900">后续图片底部截取比例</span>
+              <span id="subtitleRatioVal" class="font-mono text-indigo-700">22%</span>
+            </div>
+            <input id="subtitleRatioInput" type="range" min="10" max="50" value="22" class="w-full" />
+          </div>
+
+          <!-- Size Normalization -->
+          <div>
+            <label for="sizeNormalizeSelect" class="block text-xs font-semibold text-slate-700 mb-1.5">尺寸对齐与裁剪策略</label>
+            <select id="sizeNormalizeSelect" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="fitWidth">等宽对齐（推荐纵向长图/宫格，自动按最大宽度无损对齐）</option>
+              <option value="fitHeight">等高对齐（推荐横向画卷，自动按最大高度对齐）</option>
+              <option value="squareCrop">1:1 正方形居中裁剪（推荐九宫格/头像谷子展示）</option>
+              <option value="ratio34Crop">3:4 小红书画幅居中裁剪</option>
+              <option value="original">保持各自原始像素尺寸居中</option>
+            </select>
+          </div>
+
+          <!-- Spacing & Borders -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">外边距留白 (Padding)</span>
+                <span id="paddingValText" class="font-mono text-slate-500">24 px</span>
+              </div>
+              <input id="canvasPaddingInput" type="range" min="0" max="120" value="24" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">图片间距 (Gap)</span>
+                <span id="gapValText" class="font-mono text-slate-500">16 px</span>
+              </div>
+              <input id="canvasGapInput" type="range" min="0" max="80" value="16" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">图片圆角 (Radius)</span>
+                <span id="radiusValText" class="font-mono text-slate-500">12 px</span>
+              </div>
+              <input id="imageRadiusInput" type="range" min="0" max="64" value="12" class="w-full" />
+            </div>
+          </div>
+
+          <!-- Canvas Background Color -->
+          <div class="pt-2 border-t border-slate-100">
+            <label class="block text-xs font-semibold text-slate-700 mb-2">画布底色与边框阴影</label>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input id="bgColorPicker" type="color" value="#ffffff" class="w-8 h-8 rounded cursor-pointer border border-slate-200" />
+                <div class="flex gap-1.5">
+                  <button type="button" data-bg="#ffffff" class="bg-swatch w-6 h-6 rounded-full border border-slate-300 bg-white" title="纯白"></button>
+                  <button type="button" data-bg="#f8fafc" class="bg-swatch w-6 h-6 rounded-full border border-slate-300 bg-slate-50" title="浅灰白"></button>
+                  <button type="button" data-bg="#f5f0eb" class="bg-swatch w-6 h-6 rounded-full border border-slate-300 bg-[#f5f0eb]" title="奶油米色"></button>
+                  <button type="button" data-bg="#0f172a" class="bg-swatch w-6 h-6 rounded-full border border-slate-300 bg-slate-900" title="深邃暗黑"></button>
+                  <button type="button" data-bg="transparent" class="bg-swatch px-2 h-6 rounded-full border border-slate-300 text-[10px] text-slate-600 bg-slate-100" title="透明背景">透明</button>
+                </div>
+              </div>
+              <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                <input id="cardShadowToggle" type="checkbox" checked class="rounded text-indigo-600" />
+                <span>柔和投影</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: WATERMARK (TEXT & STAMP + TEXTURE FILL) -->
+        <div id="panelWatermark" class="hidden space-y-5">
+          <!-- Enable Watermark Toggle -->
+          <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div>
+              <p class="text-xs font-semibold text-slate-800">启用原创水印图层</p>
+              <p class="text-[11px] text-slate-500">支持全图斜铺、交错网格、防盗大叉与印章</p>
+            </div>
+            <input id="enableWatermarkToggle" type="checkbox" checked class="w-4 h-4 rounded text-indigo-600" />
+          </div>
+
+          <!-- Watermark Text & Quick Tags -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="watermarkTextInput" class="text-xs font-semibold text-slate-700">水印文案（支持多行）</label>
+              <span class="text-[11px] text-slate-400">快捷词条点击插入</span>
+            </div>
+            <textarea id="watermarkTextInput" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="输入画师/创作者署名或防盗声明...">SAMPLE · @印迹原创工作室
+仅供展示 严禁二改商用 / DO NOT REPOST</textarea>
+            <div class="flex flex-wrap gap-1.5 mt-2">
+              <button type="button" data-tag="SAMPLE · 仅供展示" class="wm-quick-tag text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition">+ SAMPLE</button>
+              <button type="button" data-tag="禁止二改 / 严禁商用 / 禁喂AI" class="wm-quick-tag text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition">+ 禁二改禁AI</button>
+              <button type="button" data-tag="私稿展示 · 除妈位外禁一切" class="wm-quick-tag text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition">+ 私稿防盗</button>
+              <button type="button" data-tag="谷圈实拍 · 盗图必究" class="wm-quick-tag text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition">+ 谷圈实拍</button>
+              <button type="button" id="insertDateTagBtn" class="text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition">+ 今日日期</button>
+            </div>
+          </div>
+
+          <!-- Watermark Distribution Style -->
+          <div>
+            <label for="wmPlacementSelect" class="block text-xs font-semibold text-slate-700 mb-1.5">水印排布方式</label>
+            <select id="wmPlacementSelect" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="staggered">交错砖墙平铺（原创圈最常用满屏防盗）</option>
+              <option value="grid">整齐矩阵平铺</option>
+              <option value="crossGuard">中心防盗交叉线 + 满屏平铺（强力约稿防盗）</option>
+              <option value="centerBadge">中心醒目大章 / 横幅锁图</option>
+              <option value="bottomRight">右下角精致落款署名</option>
+              <option value="bottomLeft">左下角精致落款署名</option>
+            </select>
+          </div>
+
+          <!-- NEW CORE REQUIREMENT: Watermark Internal Texture (水印加入底纹) -->
+          <div class="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-semibold text-indigo-950">✨ 水印内嵌肌理底纹（防魔棒/AI擦除）</span>
+                <p class="text-[11px] text-indigo-700/80">在水印文字/印章内部融入镂空斜纹、波点或炫彩渐变</p>
+              </div>
+            </div>
+            <select id="wmInternalTextureSelect" class="w-full rounded-lg border border-indigo-200 px-3 py-1.5 text-xs text-slate-700 bg-white">
+              <option value="stripe">斜线镂空底纹（经典原创圈防抠图斜纹字）</option>
+              <option value="dots">微距波点矩阵底纹（防涂抹肌理）</option>
+              <option value="crosshatch">加密十字网格底纹（高强度纹理字）</option>
+              <option value="holo">镭射彩虹渐变底纹（谷圈/高颜展示）</option>
+              <option value="solid">纯色无内嵌肌理</option>
+            </select>
+
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <label class="inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                <input id="wmPillBoxToggle" type="checkbox" checked class="rounded text-indigo-600" />
+                <span>外框防盗胶囊线框</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                <input id="wmDualStrokeToggle" type="checkbox" checked class="rounded text-indigo-600" />
+                <span>反色描边（亮暗背景皆可见）</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Custom PNG Stamp / Logo Watermark -->
+          <div class="p-3 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-700">自定义图形印章 / 透明 PNG 水印</span>
+              <button type="button" id="clearLogoWmBtn" class="hidden text-[11px] text-rose-500 hover:underline">移除印章</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="logoWmUploadInput" class="cursor-pointer text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition">
+                📤 上传透明 PNG 印章
+              </label>
+              <span id="logoWmStatusText" class="text-[11px] text-slate-400 truncate">未上传（默认使用文字+专属徽章）</span>
+              <input id="logoWmUploadInput" type="file" accept="image/*" class="hidden" />
+            </div>
+          </div>
+
+          <!-- Typography, Angle, Density, Opacity & Blend Mode -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-600 mb-1">水印主色</label>
+                <div class="flex items-center gap-2">
+                  <input id="wmColorPicker" type="color" value="#ffffff" class="w-8 h-8 rounded border border-slate-200 cursor-pointer" />
+                  <span id="wmColorHexText" class="text-xs font-mono text-slate-500">#FFFFFF</span>
+                </div>
+              </div>
+              <div>
+                <label for="wmBlendModeSelect" class="block text-xs text-slate-600 mb-1">图层混合模式</label>
+                <select id="wmBlendModeSelect" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
+                  <option value="source-over">正常 (Normal)</option>
+                  <option value="overlay">叠加 (Overlay · 融入画作)</option>
+                  <option value="soft-light">柔光 (Soft Light · 隐形自然)</option>
+                  <option value="difference">差值 (Difference · 亮暗通吃)</option>
+                  <option value="multiply">正片叠底 (Multiply)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">水印不透明度 (Opacity)</span>
+                <span id="wmOpacityVal" class="font-mono text-slate-500">32%</span>
+              </div>
+              <input id="wmOpacityInput" type="range" min="5" max="100" value="32" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">字号 / 印章大小 (Scale)</span>
+                <span id="wmSizeVal" class="font-mono text-slate-500">28 px</span>
+              </div>
+              <input id="wmSizeInput" type="range" min="14" max="96" value="28" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">旋转角度 (Angle)</span>
+                <span id="wmAngleVal" class="font-mono text-slate-500">-28°</span>
+              </div>
+              <input id="wmAngleInput" type="range" min="-90" max="90" value="-28" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">平铺间距 (Spacing)</span>
+                <span id="wmGapVal" class="font-mono text-slate-500">180 px</span>
+              </div>
+              <input id="wmGapInput" type="range" min="80" max="420" value="180" class="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: FULL-CANVAS ANTI-THEFT PATTERN & NOISE (全图防盗底纹) -->
+        <div id="panelPattern" class="hidden space-y-5">
+          <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div>
+              <p class="text-xs font-semibold text-slate-800">启用全图防盗底纹护盾</p>
+              <p class="text-[11px] text-slate-500">在画面表层叠加细腻几何肌理，破坏盗图抠图与AI吸图</p>
+            </div>
+            <input id="enablePatternToggle" type="checkbox" checked class="w-4 h-4 rounded text-indigo-600" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-2">选择全图底纹样式</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-pattern="diagonal" class="pattern-btn px-3 py-2.5 rounded-xl border border-indigo-600 bg-indigo-50/60 text-indigo-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">╱ 细密防盗斜线</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">最经典不挡画面的保护线</div>
+              </button>
+              <button type="button" data-pattern="diamond" class="pattern-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">❖ 菱形微晶格网</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">双向交织防区域修补</div>
+              </button>
+              <button type="button" data-pattern="dots" class="pattern-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">⠿ 半调波点矩阵</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">复古印刷网点质感</div>
+              </button>
+              <button type="button" data-pattern="starburst" class="pattern-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">✦ 十字星芒微纹</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">适合谷圈/OC高颜值展示</div>
+              </button>
+              <button type="button" data-pattern="wave" class="pattern-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">〰 水波防伪曲纹</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">防直线边缘检测去除</div>
+              </button>
+              <button type="button" data-pattern="grain" class="pattern-btn px-3 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium text-left transition">
+                <div class="font-semibold">░ 防AI微噪点颗粒</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">高频色彩微扰胶片感</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-600 font-medium">底纹线条颜色</span>
+              <input id="patternColorPicker" type="color" value="#ffffff" class="w-8 h-8 rounded border border-slate-200 cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">底纹强度 / 不透明度</span>
+                <span id="patternOpacityVal" class="font-mono text-slate-500">14%</span>
+              </div>
+              <input id="patternOpacityInput" type="range" min="2" max="60" value="14" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">底纹网格密度 (Spacing)</span>
+                <span id="patternSpacingVal" class="font-mono text-slate-500">32 px</span>
+              </div>
+              <input id="patternSpacingInput" type="range" min="12" max="96" value="32" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-600 font-medium">线条粗细 (Stroke Width)</span>
+                <span id="patternStrokeVal" class="font-mono text-slate-500">1.2 px</span>
+              </div>
+              <input id="patternStrokeInput" type="range" min="5" max="40" value="12" class="w-full" />
+            </div>
+          </div>
+
+          <!-- Save / Load User Custom Config -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <button type="button" id="saveCustomPresetBtn" class="flex-1 py-2 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition">💾 保存当前配置为默认</button>
+            <button type="button" id="resetDefaultBtn" class="py-2 px-3 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-xs font-medium text-slate-600 transition">恢复初始</button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </main>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-semibold text-slate-900">无损画质导出中心</h3>
+          <p class="text-xs text-slate-500 mt-0.5">基于原始分辨率 Canvas 1:1 渲染，绝不压缩原图细节</p>
+        </div>
+        <button type="button" id="closeExportModalBtn" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Export Format & Lossless Quality -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="exportFormatSelect" class="block text-xs font-semibold text-slate-700 mb-1">导出图片格式</label>
+            <select id="exportFormatSelect" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 bg-white">
+              <option value="image/png">PNG (100% 无损原画质 · 推荐)</option>
+              <option value="image/webp">WebP (100% 极清高兼容)</option>
+              <option value="image/jpeg">JPEG (1.0 最高画质无压缩)</option>
+            </select>
+          </div>
+          <div>
+            <label for="exportScaleSelect" class="block text-xs font-semibold text-slate-700 mb-1">输出分辨率倍率</label>
+            <select id="exportScaleSelect" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 bg-white">
+              <option value="1">1x 原始像素直出（无损）</option>
+              <option value="1.5">1.5x 超采样抗锯齿增强</option>
+              <option value="2">2x 双倍超清重采样</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- File Naming Prefix -->
+        <div>
+          <label for="exportPrefixInput" class="block text-xs font-semibold text-slate-700 mb-1">导出文件名前缀</label>
+          <input id="exportPrefixInput" type="text" value="印迹原创_防盗水印" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <!-- Export Scope Options -->
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-slate-700">选择导出方式（支持单张逐一导出或打包 ZIP）</label>
+
+          <div class="grid grid-cols-1 gap-2.5">
+            <!-- Action 1: Export Stitched Masterpiece -->
+            <button type="button" id="downloadStitchedSingleBtn" class="w-full p-3 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-left flex items-center justify-between transition group">
+              <div>
+                <div class="text-xs font-semibold text-indigo-950">🖼️ 导出当前拼接合成大图（单张直出）</div>
+                <div class="text-[11px] text-indigo-700/80 mt-0.5">将当前画布拼接与水印底纹合成为一张完整高清大图下载</div>
+              </div>
+              <span class="text-xs font-semibold text-indigo-600 group-hover:translate-x-0.5 transition">立即下载 →</span>
+            </button>
+
+            <!-- Action 2: Export Individual Images One by One -->
+            <button type="button" id="downloadIndividualOneByOneBtn" class="w-full p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-slate-50 text-left flex items-center justify-between transition group">
+              <div>
+                <div class="text-xs font-semibold text-slate-800">📑 逐张单独导出所有图片（每张独立加水印+底纹）</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">不合并画布，保持每张图原始独立尺寸，一张张依次触发浏览器下载</div>
+              </div>
+              <span class="text-xs font-semibold text-slate-600 group-hover:text-indigo-600">逐张下载 →</span>
+            </button>
+
+            <!-- Action 3: Export ZIP Package (All Individual + Stitched) -->
+            <button type="button" id="downloadZipPackageBtn" class="w-full p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-left flex items-center justify-between transition shadow-sm shadow-indigo-200">
+              <div>
+                <div class="text-xs font-semibold">📦 一键打包导出 ZIP 压缩包（含全部独立打码图 + 拼接大图）</div>
+                <div class="text-[11px] text-indigo-100 mt-0.5">浏览器本地急速打包无损原图，多图发博/交稿最省心</div>
+              </div>
+              <span class="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-lg">打包 ZIP ↓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress bar when exporting batch/ZIP -->
+        <div id="exportProgressBox" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="flex justify-between text-xs text-slate-600">
+            <span id="exportProgressText">正在无损渲染高清图层...</span>
+            <span id="exportProgressPercent" class="font-mono">0%</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div id="exportProgressBar" class="h-full bg-indigo-600 transition-all duration-150" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    // Application State
+    const state = {
+      images: [], // { id, name, imgElement, width, height, rotation }
+      workMode: 'stitch', // 'stitch' | 'batch'
+      activeBatchIndex: 0,
+      isComparingOriginal: false,
+      zoom: 1,
+
+      // Stitch & Layout settings
+      layout: 'vertical', // 'vertical' | 'horizontal' | 'grid2' | 'grid3' | 'subtitle' | 'single'
+      subtitleRatio: 22,
+      sizeNormalize: 'fitWidth', // 'fitWidth' | 'fitHeight' | 'squareCrop' | 'ratio34Crop' | 'original'
+      padding: 24,
+      gap: 16,
+      radius: 12,
+      bgColor: '#ffffff',
+      cardShadow: true,
+
+      // Watermark settings
+      enableWatermark: true,
+      wmText: 'SAMPLE · @印迹原创工作室\n仅供展示 严禁二改商用 / DO NOT REPOST',
+      wmPlacement: 'staggered', // 'staggered' | 'grid' | 'crossGuard' | 'centerBadge' | 'bottomRight' | 'bottomLeft'
+      wmInternalTexture: 'stripe', // 'stripe' | 'dots' | 'crosshatch' | 'holo' | 'solid'
+      wmPillBox: true,
+      wmDualStroke: true,
+      wmLogoImg: null,
+      wmColor: '#ffffff',
+      wmBlendMode: 'source-over',
+      wmOpacity: 32,
+      wmSize: 28,
+      wmAngle: -28,
+      wmGap: 180,
+
+      // Full-Canvas Pattern settings
+      enablePattern: true,
+      patternType: 'diagonal', // 'diagonal' | 'diamond' | 'dots' | 'starburst' | 'wave' | 'grain'
+      patternColor: '#ffffff',
+      patternOpacity: 14,
+      patternSpacing: 32,
+      patternStroke: 1.2
+    };
+
+    let nextImageId = 1;
+
+    // Utility: Toast Notification
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' ? 'bg-slate-900 text-white' : 'bg-indigo-600 text-white';
+      toast.className = `${bgClass} px-3.5 py-2 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 transition-all duration-200 pointer-events-auto`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 200);
+      }, 2600);
+    }
+
+    // Generate built-in aesthetic sample artworks (OC / Illustration / Merch cards)
+    function createSampleArtworks() {
+      const themes = [
+        {
+          title: 'OC 设定卡 · 星穹咏叹',
+          subtitle: 'CHARACTER DESIGN // 01',
+          grad1: '#312e81',
+          grad2: '#c084fc',
+          accent: '#fde047',
+          badge: 'ORIGINAL CHARACTER',
+          w: 900,
+          h: 1125
+        },
+        {
+          title: '约稿成图 · 暮色茶会',
+          subtitle: 'COMMISSION WORK // 02',
+          grad1: '#0f766e',
+          grad2: '#6ee7b7',
+          accent: '#fef08a',
+          badge: 'ILLUSTRATION',
+          w: 900,
+          h: 1125
+        },
+        {
+          title: '谷圈实拍 · 镭射吧唧打样',
+          subtitle: 'MERCH PHOTO // 03',
+          grad1: '#9d174d',
+          grad2: '#f472b6',
+          accent: '#ffffff',
+          badge: 'GOODS SAMPLE',
+          w: 900,
+          h: 1125
+        }
+      ];
+
+      state.images = [];
+      let loadedCount = 0;
+
+      themes.forEach((t, idx) => {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = t.w;
+        offCanvas.height = t.h;
+        const ctx = offCanvas.getContext('2d');
+
+        // Rich gradient background
+        const grad = ctx.createLinearGradient(0, 0, t.w, t.h);
+        grad.addColorStop(0, t.grad1);
+        grad.addColorStop(1, t.grad2);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, t.w, t.h);
+
+        // Decorative geometric circles & stars (simulating anime/OC illustration composition)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(t.w * 0.5, t.h * 0.44, 280, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.setLineDash([10, 12]);
+        ctx.arc(t.w * 0.5, t.h * 0.44, 330, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Glowing central silhouette card
+        ctx.fillStyle = 'rgba(255,255,255,0.14)';
+        roundRectPath(ctx, 130, 140, t.w - 260, t.h - 320, 36);
+        ctx.fill();
+
+        // Stylized character/art focal illustration shapes
+        ctx.fillStyle = t.accent;
+        ctx.beginPath();
+        ctx.arc(t.w * 0.5, t.h * 0.42, 110, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.arc(t.w * 0.5 - 35, t.h * 0.39, 18, 0, Math.PI * 2);
+        ctx.arc(t.w * 0.5 + 35, t.h * 0.39, 18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Typography inside sample art
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 42px "Noto Sans SC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(t.title, t.w / 2, t.h - 110);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.font = '600 20px "Inter", sans-serif';
+        ctx.fillText(`${t.subtitle}  ·  900×1125px`, t.w / 2, t.h - 68);
+
+        const dataUrl = offCanvas.toDataURL('image/png');
+        const img = new Image();
+        img.onload = () => {
+          state.images[idx] = {
+            id: nextImageId++,
+            name: `${t.title}.png`,
+            imgElement: img,
+            width: t.w,
+            height: t.h,
+            rotation: 0
+          };
+          loadedCount++;
+          if (loadedCount === themes.length) {
+            state.activeBatchIndex = 0;
+            renderQueueUI();
+            renderMainCanvas();
+          }
+        };
+        img.src = dataUrl;
+      });
+    }
+
+    // Helper: Rounded rectangle path
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    // Handle File Upload
+    function handleFilesSelected(fileList) {
+      const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            state.images.push({
+              id: nextImageId++,
+              name: file.name,
+              imgElement: img,
+              width: img.naturalWidth || img.width,
+              height: img.naturalHeight || img.height,
+              rotation: 0
+            });
+            loaded++;
+            if (loaded === files.length) {
+              renderQueueUI();
+              renderMainCanvas();
+              showToast(`已成功导入 ${files.length} 张原图`, 'success');
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Render Left Image Queue
+    function renderQueueUI() {
+      const container = document.getElementById('imageQueueContainer');
+      const countText = document.getElementById('queueCountText');
+      const exportBadge = document.getElementById('exportBadgeCount');
+      countText.textContent = state.images.length;
+      exportBadge.textContent = state.images.length;
+
+      container.innerHTML = '';
+
+      if (state.images.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 px-4 text-slate-400 text-xs">
+            <p class="mb-1">队列暂无图片</p>
+            <p>可点击上方上传或点击顶部「加载示例作品」体验</p>
+          </div>
+        `;
+        return;
+      }
+
+      state.images.forEach((item, index) => {
+        const isCurrentBatch = (state.workMode === 'batch' || state.layout === 'single') && state.activeBatchIndex === index;
+        const card = document.createElement('div');
+        card.className = `group flex items-center gap-2.5 p-2 rounded-xl border transition cursor-pointer ${
+          isCurrentBatch
+            ? 'border-indigo-500 bg-indigo-50/50'
+            : 'border-slate-200/80 hover:border-slate-300 bg-white'
+        }`;
+
+        card.addEventListener('click', () => {
+          state.activeBatchIndex = index;
+          renderQueueUI();
+          renderMainCanvas();
+        });
+
+        const thumb = document.createElement('img');
+        thumb.src = item.imgElement.src;
+        thumb.alt = item.name;
+        thumb.className = 'w-11 h-11 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-100';
+
+        const info = document.createElement('div');
+        info.className = 'flex-1 min-w-0';
+        info.innerHTML = `
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">#${index + 1}</span>
+            <p class="text-xs font-medium text-slate-700 truncate">${item.name}</p>
+          </div>
+          <p class="text-[10px] text-slate-400 font-mono mt-0.5">${item.width} × ${item.height} px</p>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'flex items-center gap-0.5 opacity-80 group-hover:opacity-100';
+
+        // Move Up
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.className = 'p-1 text-xs text-slate-400 hover:text-indigo-600 disabled:opacity-30';
+        upBtn.textContent = '↑';
+        upBtn.title = '上移';
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (index > 0) {
+            const temp = state.images[index - 1];
+            state.images[index - 1] = state.images[index];
+            state.images[index] = temp;
+            renderQueueUI();
+            renderMainCanvas();
+          }
+        });
+
+        // Move Down
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.className = 'p-1 text-xs text-slate-400 hover:text-indigo-600 disabled:opacity-30';
+        downBtn.textContent = '↓';
+        downBtn.title = '下移';
+        downBtn.disabled = index === state.images.length - 1;
+        downBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (index < state.images.length - 1) {
+            const temp = state.images[index + 1];
+            state.images[index + 1] = state.images[index];
+            state.images[index] = temp;
+            renderQueueUI();
+            renderMainCanvas();
+          }
+        });
+
+        // Rotate 90deg
+        const rotBtn = document.createElement('button');
+        rotBtn.type = 'button';
+        rotBtn.className = 'p-1 text-xs text-slate-400 hover:text-indigo-600';
+        rotBtn.textContent = '↻';
+        rotBtn.title = '旋转90°';
+        rotBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          item.rotation = (item.rotation + 90) % 360;
+          renderMainCanvas();
+        });
+
+        // Delete
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'p-1 text-xs text-slate-400 hover:text-rose-600';
+        delBtn.textContent = '✕';
+        delBtn.title = '移除';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.images.splice(index, 1);
+          if (state.activeBatchIndex >= state.images.length) {
+            state.activeBatchIndex = Math.max(0, state.images.length - 1);
+          }
+          renderQueueUI();
+          renderMainCanvas();
+        });
+
+        actions.append(upBtn, downBtn, rotBtn, delBtn);
+        card.append(thumb, info, actions);
+        container.appendChild(card);
+      });
+
+      updateBatchPagerUI();
+    }
+
+    function updateBatchPagerUI() {
+      const pager = document.getElementById('batchPagerControls');
+      const label = document.getElementById('previewModeLabel');
+      const idxText = document.getElementById('batchCurrentIndexText');
+      const isSingleView = state.workMode === 'batch' || state.layout === 'single';
+
+      if (isSingleView && state.images.length > 0) {
+        pager.classList.remove('hidden');
+        pager.classList.add(' flex');
+        label.textContent = '实时预览 · 单图独立打码';
+        idxText.textContent = `${state.activeBatchIndex + 1}/${state.images.length}`;
+      } else {
+        pager.classList.add('hidden');
+        pager.classList.remove('flex');
+        label.textContent = '实时预览 · 拼接总图';
+      }
+    }
+
+    // Core Rendering Pipeline: Can render either the stitched canvas OR a single image item at target scale
+    function renderSceneToCanvas(targetCanvas, targetItems, layoutMode, scaleFactor = 1, skipOverlays = false) {
+      const ctx = targetCanvas.getContext('2d');
+      if (!targetItems || targetItems.length === 0) {
+        targetCanvas.width = 800;
+        targetCanvas.height = 500;
+        ctx.clearRect(0, 0, 800, 500);
+        return;
+      }
+
+      const pad = Math.round(state.padding * scaleFactor);
+      const gap = Math.round(state.gap * scaleFactor);
+      const radius = Math.round(state.radius * scaleFactor);
+
+      // Step 1: Compute effective dimensions of each item considering rotation & normalization
+      const rawBoxes = targetItems.map(item => {
+        const swapped = item.rotation % 180 !== 0;
+        return {
+          item,
+          origW: swapped ? item.height : item.width,
+          origH: swapped ? item.width : item.height
+        };
+      });
+
+      const maxW = Math.max(...rawBoxes.map(b => b.origW));
+      const maxH = Math.max(...rawBoxes.map(b => b.origH));
+
+      const normalizedBoxes = rawBoxes.map((b, idx) => {
+        let drawW = b.origW;
+        let drawH = b.origH;
+        let cropX = 0, cropY = 0, cropW = b.origW, cropH = b.origH;
+
+        if (layoutMode === 'subtitle' && idx > 0) {
+          // Subtitle mode: match first image width, crop bottom slice
+          const firstW = rawBoxes[0].origW;
+          const ratio = state.subtitleRatio / 100;
+          cropH = Math.round(b.origH * ratio);
+          cropY = b.origH - cropH;
+          drawW = firstW;
+          drawH = Math.round(cropH * (firstW / b.origW));
+        } else if (state.sizeNormalize === 'fitWidth') {
+          drawW = maxW;
+          drawH = Math.round(b.origH * (maxW / b.origW));
+        } else if (state.sizeNormalize === 'fitHeight') {
+          drawH = maxH;
+          drawW = Math.round(b.origW * (maxH / b.origH));
+        } else if (state.sizeNormalize === 'squareCrop') {
+          const side = Math.min(b.origW, b.origH);
+          cropX = Math.round((b.origW - side) / 2);
+          cropY = Math.round((b.origH - side) / 2);
+          cropW = side;
+          cropH = side;
+          drawW = maxW;
+          drawH = maxW;
+        } else if (state.sizeNormalize === 'ratio34Crop') {
+          const targetRatio = 3 / 4;
+          const currentRatio = b.origW / b.origH;
+          if (currentRatio > targetRatio) {
+            cropW = Math.round(b.origH * targetRatio);
+            cropX = Math.round((b.origW - cropW) / 2);
+          } else {
+            cropH = Math.round(b.origW / targetRatio);
+            cropY = Math.round((b.origH - cropH) / 2);
+          }
+          drawW = maxW;
+          drawH = Math.round(maxW / targetRatio);
+        }
+
+        return {
+          ...b,
+          cropX,
+          cropY,
+          cropW,
+          cropH,
+          w: Math.round(drawW * scaleFactor),
+          h: Math.round(drawH * scaleFactor)
+        };
+      });
+
+      // Step 2: Compute positions and total canvas size
+      let totalW = 0;
+      let totalH = 0;
+      const placements = [];
+
+      if (layoutMode === 'single' || normalizedBoxes.length === 1) {
+        const b = normalizedBoxes[0];
+        totalW = b.w + pad * 2;
+        totalH = b.h + pad * 2;
+        placements.push({ ...b, x: pad, y: pad });
+      } else if (layoutMode === 'vertical' || layoutMode === 'subtitle') {
+        const contentW = Math.max(...normalizedBoxes.map(b => b.w));
+        let curY = pad;
+        normalizedBoxes.forEach((b, idx) => {
+          const x = pad + Math.round((contentW - b.w) / 2);
+          placements.push({ ...b, x, y: curY });
+          curY += b.h + (idx < normalizedBoxes.length - 1 ? gap : 0);
+        });
+        totalW = contentW + pad * 2;
+        totalH = curY + pad;
+      } else if (layoutMode === 'horizontal') {
+        const contentH = Math.max(...normalizedBoxes.map(b => b.h));
+        let curX = pad;
+        normalizedBoxes.forEach((b, idx) => {
+          const y = pad + Math.round((contentH - b.h) / 2);
+          placements.push({ ...b, x: curX, y });
+          curX += b.w + (idx < normalizedBoxes.length - 1 ? gap : 0);
+        });
+        totalW = curX + pad;
+        totalH = contentH + pad * 2;
+      } else if (layoutMode === 'grid2' || layoutMode === 'grid3') {
+        const cols = layoutMode === 'grid2' ? 2 : 3;
+        const cellW = Math.max(...normalizedBoxes.map(b => b.w));
+        let curY = pad;
+        for (let r = 0; r < Math.ceil(normalizedBoxes.length / cols); r++) {
+          const rowItems = normalizedBoxes.slice(r * cols, (r + 1) * cols);
+          const rowH = Math.max(...rowItems.map(b => b.h));
+          rowItems.forEach((b, cIdx) => {
+            const x = pad + cIdx * (cellW + gap) + Math.round((cellW - b.w) / 2);
+            const y = curY + Math.round((rowH - b.h) / 2);
+            placements.push({ ...b, x, y });
+          });
+          curY += rowH + gap;
+        }
+        totalW = pad * 2 + cols * cellW + (cols - 1) * gap;
+        totalH = curY - gap + pad;
+      }
+
+      targetCanvas.width = Math.max(1, totalW);
+      targetCanvas.height = Math.max(1, totalH);
+
+      // Step 3: Draw Canvas Background
+      ctx.clearRect(0, 0, totalW, totalH);
+      if (state.bgColor !== 'transparent') {
+        ctx.fillStyle = state.bgColor;
+        ctx.fillRect(0, 0, totalW, totalH);
+      }
+
+      // Step 4: Draw Each Image with Optional Shadow & Rounded Corners
+      placements.forEach(p => {
+        ctx.save();
+        if (state.cardShadow && pad > 0) {
+          ctx.shadowColor = 'rgba(15, 23, 42, 0.16)';
+          ctx.shadowBlur = Math.round(18 * scaleFactor);
+          ctx.shadowOffsetY = Math.round(6 * scaleFactor);
+        }
+
+        roundRectPath(ctx, p.x, p.y, p.w, p.h, radius);
+        if (state.bgColor !== 'transparent') {
+          ctx.fillStyle = state.bgColor;
+          ctx.fill();
+        }
+        ctx.shadowColor = 'transparent';
+        ctx.clip();
+
+        // Draw rotated image into offscreen helper if rotated
+        const rot = p.item.rotation % 360;
+        if (rot === 0) {
+          ctx.drawImage(
+            p.item.imgElement,
+            p.cropX, p.cropY, p.cropW, p.cropH,
+            p.x, p.y, p.w, p.h
+          );
+        } else {
+          const rotCanvas = document.createElement('canvas');
+          rotCanvas.width = p.origW;
+          rotCanvas.height = p.origH;
+          const rCtx = rotCanvas.getContext('2d');
+          rCtx.translate(p.origW / 2, p.origH / 2);
+          rCtx.rotate((rot * Math.PI) / 180);
+          rCtx.drawImage(p.item.imgElement, -p.item.width / 2, -p.item.height / 2);
+          ctx.drawImage(
+            rotCanvas,
+            p.cropX, p.cropY, p.cropW, p.cropH,
+            p.x, p.y, p.w, p.h
+          );
+        }
+        ctx.restore();
+      });
+
+      if (skipOverlays) return;
+
+      // Step 5: Render Full-Canvas Anti-Theft Pattern Layer (底纹护盾)
+      if (state.enablePattern) {
+        renderFullCanvasPattern(ctx, totalW, totalH, scaleFactor);
+      }
+
+      // Step 6: Render Watermark Layer with Internal Texture (原创水印+内嵌肌理底纹)
+      if (state.enableWatermark) {
+        renderWatermarkLayer(ctx, totalW, totalH, scaleFactor);
+      }
+    }
+
+    // Render Full-Canvas Anti-Theft Pattern
+    function renderFullCanvasPattern(ctx, width, height, scaleFactor) {
+      ctx.save();
+      ctx.globalAlpha = state.patternOpacity / 100;
+      const pType = state.patternType;
+      const spacing = Math.max(8, Math.round(state.patternSpacing * scaleFactor));
+      const strokeW = Math.max(0.5, state.patternStroke * scaleFactor);
+      const color = state.patternColor;
+
+      if (pType === 'grain') {
+        // High-frequency anti-AI subtle color/monochrome micro-grain tile
+        const tileSize = 96;
+        const tile = document.createElement('canvas');
+        tile.width = tileSize;
+        tile.height = tileSize;
+        const tCtx = tile.getContext('2d');
+        const imgData = tCtx.createImageData(tileSize, tileSize);
+        const data = imgData.data;
+        // Deterministic pseudo-random pattern so it doesn't flicker
+        let seed = 1337;
+        for (let i = 0; i < data.length; i += 4) {
+          seed = (seed * 16807) % 2147483647;
+          const v = seed % 255;
+          data[i] = v;
+          data[i + 1] = (v + 60) % 255;
+          data[i + 2] = (v + 130) % 255;
+          data[i + 3] = 160;
+        }
+        tCtx.putImageData(imgData, 0, 0);
+        const pat = ctx.createPattern(tile, 'repeat');
+        ctx.fillStyle = pat;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+        return;
+      }
+
+      // Create vector pattern tile
+      const tile = document.createElement('canvas');
+      tile.width = spacing;
+      tile.height = spacing;
+      const tCtx = tile.getContext('2d');
+      tCtx.strokeStyle = color;
+      tCtx.fillStyle = color;
+      tCtx.lineWidth = strokeW;
+
+      if (pType === 'diagonal') {
+        tCtx.beginPath();
+        tCtx.moveTo(0, spacing);
+        tCtx.lineTo(spacing, 0);
+        tCtx.moveTo(-spacing / 2, spacing / 2);
+        tCtx.lineTo(spacing / 2, -spacing / 2);
+        tCtx.moveTo(spacing / 2, spacing * 1.5);
+        tCtx.lineTo(spacing * 1.5, spacing / 2);
+        tCtx.stroke();
+      } else if (pType === 'diamond') {
+        tCtx.beginPath();
+        tCtx.moveTo(0, spacing);
+        tCtx.lineTo(spacing, 0);
+        tCtx.moveTo(0, 0);
+        tCtx.lineTo(spacing, spacing);
+        tCtx.stroke();
+      } else if (pType === 'dots') {
+        const r = Math.max(1.2, strokeW * 1.3);
+        tCtx.beginPath();
+        tCtx.arc(spacing * 0.25, spacing * 0.25, r, 0, Math.PI * 2);
+        tCtx.arc(spacing * 0.75, spacing * 0.75, r, 0, Math.PI * 2);
+        tCtx.fill();
+      } else if (pType === 'starburst') {
+        const cx = spacing / 2;
+        const cy = spacing / 2;
+        const arm = spacing * 0.28;
+        tCtx.beginPath();
+        tCtx.moveTo(cx - arm, cy);
+        tCtx.lineTo(cx + arm, cy);
+        tCtx.moveTo(cx, cy - arm);
+        tCtx.lineTo(cx, cy + arm);
+        tCtx.stroke();
+        tCtx.beginPath();
+        tCtx.arc(cx, cy, strokeW * 1.1, 0, Math.PI * 2);
+        tCtx.fill();
+      } else if (pType === 'wave') {
+        tCtx.beginPath();
+        tCtx.moveTo(0, spacing / 2);
+        tCtx.bezierCurveTo(
+          spacing * 0.25, spacing * 0.1,
+          spacing * 0.75, spacing * 0.9,
+          spacing, spacing / 2
+        );
+        tCtx.stroke();
+      }
+
+      const pattern = ctx.createPattern(tile, 'repeat');
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+    }
+
+    // Create Internal Texture Fill Pattern for Watermark Stamp (水印内嵌底纹)
+    function createWatermarkInternalFill(ctx, width, height, baseColor, textureMode, scaleFactor) {
+      if (textureMode === 'solid') {
+        return baseColor;
+      }
+      if (textureMode === 'holo') {
+        const grad = ctx.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
+        grad.addColorStop(0, '#f472b6');
+        grad.addColorStop(0.35, '#a78bfa');
+        grad.addColorStop(0.7, '#38bdf8');
+        grad.addColorStop(1, '#fde047');
+        return grad;
+      }
+
+      const pCanvas = document.createElement('canvas');
+      const step = Math.max(6, Math.round(8 * scaleFactor));
+      pCanvas.width = step;
+      pCanvas.height = step;
+      const pCtx = pCanvas.getContext('2d');
+
+      // Base translucent fill + high-density internal pattern lines
+      pCtx.strokeStyle = baseColor;
+      pCtx.fillStyle = baseColor;
+      pCtx.lineWidth = Math.max(1.2, 1.5 * scaleFactor);
+
+      if (textureMode === 'stripe') {
+        pCtx.globalAlpha = 0.35;
+        pCtx.fillRect(0, 0, step, step);
+        pCtx.globalAlpha = 1.0;
+        pCtx.beginPath();
+        pCtx.moveTo(0, step);
+        pCtx.lineTo(step, 0);
+        pCtx.stroke();
+      } else if (textureMode === 'dots') {
+        pCtx.globalAlpha = 0.3;
+        pCtx.fillRect(0, 0, step, step);
+        pCtx.globalAlpha = 1.0;
+        pCtx.beginPath();
+        pCtx.arc(step / 2, step / 2, Math.max(1.4, step * 0.24), 0, Math.PI * 2);
+        pCtx.fill();
+      } else if (textureMode === 'crosshatch') {
+        pCtx.globalAlpha = 0.28;
+        pCtx.fillRect(0, 0, step, step);
+        pCtx.globalAlpha = 1.0;
+        pCtx.beginPath();
+        pCtx.moveTo(0, step);
+        pCtx.lineTo(step, 0);
+        pCtx.moveTo(0, 0);
+        pCtx.lineTo(step, step);
+        pCtx.stroke();
+      }
+
+      return ctx.createPattern(pCanvas, 'repeat');
+    }
+
+    // Build a Single Watermark Stamp Canvas (Text + Internal Texture + Pill Frame + Optional PNG Logo)
+    function buildWatermarkStamp(scaleFactor, isLargeCenter = false) {
+      const lines = (state.wmText || 'SAMPLE').split('\n').filter(l => l.trim().length > 0);
+      if (lines.length === 0 && !state.wmLogoImg) return null;
+
+      const baseFontSize = Math.round((isLargeCenter ? state.wmSize * 1.85 : state.wmSize) * scaleFactor);
+      const lineHeight = Math.round(baseFontSize * 1.38);
+
+      const measureCanvas = document.createElement('canvas');
+      const mCtx = measureCanvas.getContext('2d');
+      mCtx.font = `700 ${baseFontSize}px "Noto Sans SC", "Inter", sans-serif`;
+
+      let maxTextW = 0;
+      lines.forEach(line => {
+        const w = mCtx.measureText(line).width;
+        if (w > maxTextW) maxTextW = w;
+      });
+
+      const logoSize = state.wmLogoImg ? Math.round(baseFontSize * 2.1) : 0;
+      const logoGap = state.wmLogoImg && lines.length > 0 ? Math.round(12 * scaleFactor) : 0;
+
+      const padX = Math.round(baseFontSize * 0.85);
+      const padY = Math.round(baseFontSize * 0.55);
+
+      const contentW = Math.max(maxTextW, logoSize);
+      const contentH = lines.length * lineHeight + (logoSize ? logoSize + logoGap : 0);
+
+      const stampW = Math.ceil(contentW + padX * 2 + 12 * scaleFactor);
+      const stampH = Math.ceil(contentH + padY * 2 + 12 * scaleFactor);
+
+      const stampCanvas = document.createElement('canvas');
+      stampCanvas.width = Math.max(20, stampW);
+      stampCanvas.height = Math.max(20, stampH);
+      const sCtx = stampCanvas.getContext('2d');
+
+      sCtx.translate(stampW / 2, stampH / 2);
+
+      const fillStyle = createWatermarkInternalFill(
+        sCtx,
+        stampW,
+        stampH,
+        state.wmColor,
+        state.wmInternalTexture,
+        scaleFactor
+      );
+
+      // Optional Anti-Theft Pill Frame around watermark unit
+      if (state.wmPillBox) {
+        const boxW = stampW - 8 * scaleFactor;
+        const boxH = stampH - 8 * scaleFactor;
+        roundRectPath(sCtx, -boxW / 2, -boxH / 2, boxW, boxH, Math.round(10 * scaleFactor));
+        if (state.wmDualStroke) {
+          sCtx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+          sCtx.lineWidth = Math.max(2.5, 3 * scaleFactor);
+          sCtx.stroke();
+        }
+        sCtx.strokeStyle = state.wmColor;
+        sCtx.lineWidth = Math.max(1.2, 1.6 * scaleFactor);
+        sCtx.stroke();
+      }
+
+      let currentY = -contentH / 2;
+
+      // Draw custom uploaded logo if present
+      if (state.wmLogoImg) {
+        const aspect = state.wmLogoImg.width / state.wmLogoImg.height;
+        const drawH = logoSize;
+        const drawW = drawH * aspect;
+        sCtx.drawImage(state.wmLogoImg, -drawW / 2, currentY, drawW, drawH);
+        currentY += drawH + logoGap;
+      }
+
+      // Draw Watermark Text with Internal Pattern Fill & Dual Contrast Stroke
+      sCtx.font = `700 ${baseFontSize}px "Noto Sans SC", "Inter", sans-serif`;
+      sCtx.textAlign = 'center';
+      sCtx.textBaseline = 'middle';
+
+      lines.forEach((line, idx) => {
+        const y = currentY + (idx + 0.5) * lineHeight;
+        if (state.wmDualStroke) {
+          sCtx.strokeStyle = state.wmColor.toLowerCase() === '#000000' ? 'rgba(255,255,255,0.65)' : 'rgba(15,23,42,0.55)';
+          sCtx.lineWidth = Math.max(2, 3 * scaleFactor);
+          sCtx.lineJoin = 'round';
+          sCtx.strokeText(line, 0, y);
+        }
+        sCtx.fillStyle = fillStyle;
+        sCtx.fillText(line, 0, y);
+      });
+
+      return stampCanvas;
+    }
+
+    // Render Watermark Layer onto Main Canvas
+    function renderWatermarkLayer(ctx, width, height, scaleFactor) {
+      ctx.save();
+      ctx.globalAlpha = state.wmOpacity / 100;
+      ctx.globalCompositeOperation = state.wmBlendMode;
+
+      const placement = state.wmPlacement;
+
+      // Optional Cross Guard Lines for strong commission protection
+      if (placement === 'crossGuard') {
+        ctx.save();
+        ctx.strokeStyle = state.wmColor;
+        ctx.lineWidth = Math.max(2, 3 * scaleFactor);
+        ctx.setLineDash([16 * scaleFactor, 10 * scaleFactor]);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(width, height);
+        ctx.moveTo(width, 0);
+        ctx.lineTo(0, height);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (placement === 'centerBadge') {
+        const largeStamp = buildWatermarkStamp(scaleFactor, true);
+        if (largeStamp) {
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((state.wmAngle * Math.PI) / 180);
+          ctx.drawImage(largeStamp, -largeStamp.width / 2, -largeStamp.height / 2);
+        }
+        ctx.restore();
+        return;
+      }
+
+      if (placement === 'bottomRight' || placement === 'bottomLeft') {
+        const cornerStamp = buildWatermarkStamp(scaleFactor, false);
+        if (cornerStamp) {
+          const margin = Math.round(24 * scaleFactor);
+          const x = placement === 'bottomRight'
+            ? width - cornerStamp.width / 2 - margin
+            : cornerStamp.width / 2 + margin;
+          const y = height - cornerStamp.height / 2 - margin;
+          ctx.translate(x, y);
+          ctx.drawImage(cornerStamp, -cornerStamp.width / 2, -cornerStamp.height / 2);
+        }
+        ctx.restore();
+        return;
+      }
+
+      // Tiled modes: 'staggered', 'grid', 'crossGuard'
+      const stamp = buildWatermarkStamp(scaleFactor, false);
+      if (!stamp) {
+        ctx.restore();
+        return;
+      }
+
+      const gapPx = Math.round(state.wmGap * scaleFactor);
+      const stepX = stamp.width + gapPx;
+      const stepY = stamp.height + Math.round(gapPx * 0.78);
+
+      const diag = Math.hypot(width, height);
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate((state.wmAngle * Math.PI) / 180);
+
+      let rowIdx = 0;
+      for (let y = -diag; y <= diag; y += stepY) {
+        const offsetX = (placement === 'staggered' || placement === 'crossGuard') && (rowIdx % 2 === 1)
+          ? stepX / 2
+          : 0;
+        for (let x = -diag; x <= diag; x += stepX) {
+          ctx.drawImage(stamp, x + offsetX - stamp.width / 2, y - stamp.height / 2);
+        }
+        rowIdx++;
+      }
+
+      ctx.restore();
+    }
+
+    // Render Main Preview Canvas
+    function renderMainCanvas() {
+      const previewCanvas = document.getElementById('mainPreviewCanvas');
+      const resBadge = document.getElementById('canvasResolutionBadge');
+
+      if (state.images.length === 0) {
+        previewCanvas.width = 720;
+        previewCanvas.height = 480;
+        const ctx = previewCanvas.getContext('2d');
+        ctx.clearRect(0, 0, 720, 480);
+        resBadge.textContent = '0 × 0 px';
+        return;
+      }
+
+      const isSingleMode = state.workMode === 'batch' || state.layout === 'single';
+      const activeItems = isSingleMode
+        ? [state.images[state.activeBatchIndex] || state.images[0]]
+        : state.images;
+      const effectiveLayout = isSingleMode ? 'single' : state.layout;
+
+      renderSceneToCanvas(
+        previewCanvas,
+        activeItems,
+        effectiveLayout,
+        1,
+        state.isComparingOriginal
+      );
+
+      resBadge.textContent = `${previewCanvas.width} × ${previewCanvas.height} px`;
+    }
+
+    // Apply Built-in Presets
+    function applyPreset(presetName) {
+      if (presetName === 'commission') {
+        state.layout = 'vertical';
+        state.padding = 24;
+        state.gap = 16;
+        state.radius = 12;
+        state.enableWatermark = true;
+        state.wmText = 'SAMPLE · @印迹原创工作室\n私稿展示 除妈位外禁一切 / DO NOT REPOST';
+        state.wmPlacement = 'crossGuard';
+        state.wmInternalTexture = 'stripe';
+        state.wmPillBox = true;
+        state.wmOpacity = 34;
+        state.wmAngle = -28;
+        state.enablePattern = true;
+        state.patternType = 'diagonal';
+        state.patternOpacity = 15;
+        showToast('已应用「约稿展示强力防盗」预设');
+      } else if (presetName === 'merch') {
+        state.layout = 'grid2';
+        state.sizeNormalize = 'squareCrop';
+        state.padding = 32;
+        state.gap = 20;
+        state.radius = 20;
+        state.bgColor = '#f5f0eb';
+        state.enableWatermark = true;
+        state.wmText = '✨ 谷圈实拍 · @印迹手作\n严禁盗图上架闲鱼/拼多多';
+        state.wmPlacement = 'staggered';
+        state.wmInternalTexture = 'holo';
+        state.wmPillBox = true;
+        state.wmOpacity = 36;
+        state.enablePattern = true;
+        state.patternType = 'starburst';
+        state.patternOpacity = 18;
+        showToast('已应用「谷圈/手作实拍」镭射星芒预设');
+      } else if (presetName === 'comic') {
+        state.layout = 'vertical';
+        state.sizeNormalize = 'fitWidth';
+        state.padding = 0;
+        state.gap = 0;
+        state.radius = 0;
+        state.enableWatermark = true;
+        state.wmText = '© 原创条漫连载 · 禁止搬运快手/抖音';
+        state.wmPlacement = 'staggered';
+        state.wmInternalTexture = 'dots';
+        state.wmPillBox = false;
+        state.wmOpacity = 22;
+        state.enablePattern = true;
+        state.patternType = 'wave';
+        state.patternOpacity = 10;
+        showToast('已应用「条漫无缝长图」预设');
+      } else if (presetName === 'grid') {
+        state.layout = 'grid3';
+        state.sizeNormalize = 'ratio34Crop';
+        state.padding = 36;
+        state.gap = 18;
+        state.radius = 16;
+        state.bgColor = '#ffffff';
+        state.enableWatermark = true;
+        state.wmText = '@印迹原创日常 · ORIGINAL ART';
+        state.wmPlacement = 'staggered';
+        state.wmInternalTexture = 'crosshatch';
+        state.wmPillBox = true;
+        state.wmOpacity = 25;
+        state.enablePattern = true;
+        state.patternType = 'grain';
+        state.patternOpacity = 12;
+        showToast('已应用「小红书圆角宫格」预设');
+      }
+      syncControlsFromState();
+      renderMainCanvas();
+    }
+
+    // Sync HTML Controls with State
+    function syncControlsFromState() {
+      // Work mode buttons
+      const modeStitchBtn = document.getElementById('modeStitchBtn');
+      const modeBatchBtn = document.getElementById('modeBatchBtn');
+      if (state.workMode === 'stitch') {
+        modeStitchBtn.className = 'px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-sm font-medium transition';
+        modeBatchBtn.className = 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 font-medium transition';
+      } else {
+        modeBatchBtn.className = 'px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-sm font-medium transition';
+        modeStitchBtn.className = 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 font-medium transition';
+      }
+
+      // Layout buttons
+      document.querySelectorAll('.layout-btn').forEach(btn => {
+        const isActive = btn.dataset.layout === state.layout;
+        btn.className = `layout-btn px-3 py-2.5 rounded-xl border text-xs font-medium flex flex-col items-center gap-1 transition ${
+          isActive
+            ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700'
+            : 'border-slate-200 hover:border-slate-300 text-slate-700'
+        }`;
+      });
+
+      document.getElementById('subtitleCropControl').classList.toggle('hidden', state.layout !== 'subtitle');
+      document.getElementById('subtitleRatioInput').value = state.subtitleRatio;
+      document.getElementById('subtitleRatioVal').textContent = `${state.subtitleRatio}%`;
+
+      document.getElementById('sizeNormalizeSelect').value = state.sizeNormalize;
+      document.getElementById('canvasPaddingInput').value = state.padding;
+      document.getElementById('paddingValText').textContent = `${state.padding} px`;
+      document.getElementById('canvasGapInput').value = state.gap;
+      document.getElementById('gapValText').textContent = `${state.gap} px`;
+      document.getElementById('imageRadiusInput').value = state.radius;
+      document.getElementById('radiusValText').textContent = `${state.radius} px`;
+      if (state.bgColor !== 'transparent') {
+        document.getElementById('bgColorPicker').value = state.bgColor;
+      }
+      document.getElementById('cardShadowToggle').checked = state.cardShadow;
+
+      // Watermark controls
+      document.getElementById('enableWatermarkToggle').checked = state.enableWatermark;
+      document.getElementById('watermarkTextInput').value = state.wmText;
+      document.getElementById('wmPlacementSelect').value = state.wmPlacement;
+      document.getElementById('wmInternalTextureSelect').value = state.wmInternalTexture;
+      document.getElementById('wmPillBoxToggle').checked = state.wmPillBox;
+      document.getElementById('wmDualStrokeToggle').checked = state.wmDualStroke;
+      document.getElementById('wmColorPicker').value = state.wmColor;
+      document.getElementById('wmColorHexText').textContent = state.wmColor.toUpperCase();
+      document.getElementById('wmBlendModeSelect').value = state.wmBlendMode;
+      document.getElementById('wmOpacityInput').value = state.wmOpacity;
+      document.getElementById('wmOpacityVal').textContent = `${state.wmOpacity}%`;
+      document.getElementById('wmSizeInput').value = state.wmSize;
+      document.getElementById('wmSizeVal').textContent = `${state.wmSize} px`;
+      document.getElementById('wmAngleInput').value = state.wmAngle;
+      document.getElementById('wmAngleVal').textContent = `${state.wmAngle}°`;
+      document.getElementById('wmGapInput').value = state.wmGap;
+      document.getElementById('wmGapVal').textContent = `${state.wmGap} px`;
+
+      // Pattern controls
+      document.getElementById('enablePatternToggle').checked = state.enablePattern;
+      document.querySelectorAll('.pattern-btn').forEach(btn => {
+        const isActive = btn.dataset.pattern === state.patternType;
+        btn.className = `pattern-btn px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition ${
+          isActive
+            ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700'
+            : 'border-slate-200 hover:border-slate-300 text-slate-700'
+        }`;
+      });
+      document.getElementById('patternColorPicker').value = state.patternColor;
+      document.getElementById('patternOpacityInput').value = state.patternOpacity;
+      document.getElementById('patternOpacityVal').textContent = `${state.patternOpacity}%`;
+      document.getElementById('patternSpacingInput').value = state.patternSpacing;
+      document.getElementById('patternSpacingVal').textContent = `${state.patternSpacing} px`;
+      document.getElementById('patternStrokeInput').value = Math.round(state.patternStroke * 10);
+      document.getElementById('patternStrokeVal').textContent = `${state.patternStroke.toFixed(1)} px`;
+
+      updateBatchPagerUI();
+    }
+
+    // Export Helpers: Convert Canvas to Blob (100% lossless quality)
+    function canvasToBlobAsync(canvas, mimeType) {
+      return new Promise(resolve => {
+        canvas.toBlob(blob => resolve(blob), mimeType, 1.0);
+      });
+    }
+
+    function getExtensionFromMime(mime) {
+      if (mime === 'image/webp') return 'webp';
+      if (mime === 'image/jpeg') return 'jpg';
+      return 'png';
+    }
+
+    function triggerBlobDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+
+    function updateExportProgress(visible, text = '', percent = 0) {
+      const box = document.getElementById('exportProgressBox');
+      box.classList.toggle('hidden', !visible);
+      document.getElementById('exportProgressText').textContent = text;
+      document.getElementById('exportProgressPercent').textContent = `${percent}%`;
+      document.getElementById('exportProgressBar').style.width = `${percent}%`;
+    }
+
+    // Export 1: Download Stitched Single Image
+    async function exportStitchedSingle() {
+      if (state.images.length === 0) {
+        showToast('请先上传或加载图片');
+        return;
+      }
+      const mime = document.getElementById('exportFormatSelect').value;
+      const scale = parseFloat(document.getElementById('exportScaleSelect').value) || 1;
+      const prefix = (document.getElementById('exportPrefixInput').value || '印迹原创').trim();
+      const ext = getExtensionFromMime(mime);
+
+      updateExportProgress(true, '正在渲染无损拼接大图...', 50);
+      const offCanvas = document.createElement('canvas');
+      const layoutToUse = state.layout === 'single' ? 'vertical' : state.layout;
+      renderSceneToCanvas(offCanvas, state.images, layoutToUse, scale, false);
+
+      const blob = await canvasToBlobAsync(offCanvas, mime);
+      updateExportProgress(true, '导出完成！', 100);
+      triggerBlobDownload(blob, `${prefix}_拼接总图_${offCanvas.width}x${offCanvas.height}.${ext}`);
+      showToast('无损拼接大图已开始下载', 'success');
+      setTimeout(() => updateExportProgress(false), 1200);
+    }
+
+    // Export 2: Download Each Image Individually (One by One)
+    async function exportIndividualOneByOne() {
+      if (state.images.length === 0) {
+        showToast('请先上传或加载图片');
+        return;
+      }
+      const mime = document.getElementById('exportFormatSelect').value;
+      const scale = parseFloat(document.getElementById('exportScaleSelect').value) || 1;
+      const prefix = (document.getElementById('exportPrefixInput').value || '印迹原创').trim();
+      const ext = getExtensionFromMime(mime);
+
+      for (let i = 0; i < state.images.length; i++) {
+        const pct = Math.round(((i + 1) / state.images.length) * 100);
+        updateExportProgress(true, `正在无损导出第 ${i + 1} / ${state.images.length} 张...`, pct);
+        const offCanvas = document.createElement('canvas');
+        renderSceneToCanvas(offCanvas, [state.images[i]], 'single', scale, false);
+        const blob = await canvasToBlobAsync(offCanvas, mime);
+        const num = String(i + 1).padStart(2, '0');
+        triggerBlobDownload(blob, `${prefix}_${num}.${ext}`);
+        await new Promise(r => setTimeout(r, 260));
+      }
+
+      showToast(`已逐张导出全部 ${state.images.length} 张无损图片`, 'success');
+      setTimeout(() => updateExportProgress(false), 1200);
+    }
+
+    // Export 3: Download All as a Lossless ZIP Archive
+    async function exportAsZipPackage() {
+      if (state.images.length === 0) {
+        showToast('请先上传或加载图片');
+        return;
+      }
+      if (typeof JSZip === 'undefined') {
+        showToast('正在回退为逐张无损下载...');
+        await exportIndividualOneByOne();
+        return;
+      }
+
+      const mime = document.getElementById('exportFormatSelect').value;
+      const scale = parseFloat(document.getElementById('exportScaleSelect').value) || 1;
+      const prefix = (document.getElementById('exportPrefixInput').value || '印迹原创').trim();
+      const ext = getExtensionFromMime(mime);
+
+      const zip = new JSZip();
+      const folder = zip.folder(prefix);
+
+      // Add each individually watermarked image
+      for (let i = 0; i < state.images.length; i++) {
+        const pct = Math.round(((i + 1) / (state.images.length + 1)) * 85);
+        updateExportProgress(true, `正在渲染单图 (${i + 1}/${state.images.length})...`, pct);
+        const offCanvas = document.createElement('canvas');
+        renderSceneToCanvas(offCanvas, [state.images[i]], 'single', scale, false);
+        const blob = await canvasToBlobAsync(offCanvas, mime);
+        const num = String(i + 1).padStart(2, '0');
+        folder.file(`${prefix}_单图_${num}.${ext}`, blob);
+      }
+
+      // Also include the combined stitched image if more than 1 image
+      if (state.images.length > 1) {
+        updateExportProgress(true, '正在合成拼接总图并写入压缩包...', 92);
+        const stitchCanvas = document.createElement('canvas');
+        const layoutToUse = state.layout === 'single' ? 'vertical' : state.layout;
+        renderSceneToCanvas(stitchCanvas, state.images, layoutToUse, scale, false);
+        const stitchBlob = await canvasToBlobAsync(stitchCanvas, mime);
+        folder.file(`${prefix}_00_拼接总图.${ext}`, stitchBlob);
+      }
+
+      updateExportProgress(true, '正在打包生成无损 ZIP 压缩包...', 98);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      triggerBlobDownload(zipBlob, `${prefix}_无损全套图包.zip`);
+      updateExportProgress(true, 'ZIP 打包导出完成！', 100);
+      showToast('ZIP 压缩包已生成并开始下载', 'success');
+      setTimeout(() => updateExportProgress(false), 1400);
+    }
+
+    // Bind All DOM Listeners
+    function initEventListeners() {
+      // File Input & Drag-and-Drop
+      const uploadInput = document.getElementById('imageUploadInput');
+      const dropzone = document.getElementById('dropzoneArea');
+
+      uploadInput.addEventListener('change', (e) => {
+        handleFilesSelected(e.target.files);
+        uploadInput.value = '';
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-50/40');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40');
+        if (e.dataTransfer.files) {
+          handleFilesSelected(e.dataTransfer.files);
+        }
+      });
+
+      // Queue Header Controls
+      document.getElementById('reverseOrderBtn').addEventListener('click', () => {
+        state.images.reverse();
+        renderQueueUI();
+        renderMainCanvas();
+      });
+
+      document.getElementById('clearAllBtn').addEventListener('click', () => {
+        state.images = [];
+        renderQueueUI();
+        renderMainCanvas();
+      });
+
+      document.getElementById('loadSampleBtn').addEventListener('click', () => {
+        createSampleArtworks();
+        showToast('已加载 3 张示例原创作品');
+      });
+
+      // Work Mode Switcher
+      document.getElementById('modeStitchBtn').addEventListener('click', () => {
+        state.workMode = 'stitch';
+        if (state.layout === 'single') state.layout = 'vertical';
+        syncControlsFromState();
+        renderQueueUI();
+        renderMainCanvas();
+      });
+
+      document.getElementById('modeBatchBtn').addEventListener('click', () => {
+        state.workMode = 'batch';
+        syncControlsFromState();
+        renderQueueUI();
+        renderMainCanvas();
+      });
+
+      // Batch Pager
+      document.getElementById('prevImageBtn').addEventListener('click', () => {
+        if (state.images.length === 0) return;
+        state.activeBatchIndex = (state.activeBatchIndex - 1 + state.images.length) % state.images.length;
+        renderQueueUI();
+        renderMainCanvas();
+      });
+      document.getElementById('nextImageBtn').addEventListener('click', () => {
+        if (state.images.length === 0) return;
+        state.activeBatchIndex = (state.activeBatchIndex + 1) % state.images.length;
+        renderQueueUI();
+        renderMainCanvas();
+      });
+
+      // Zoom & Hold Compare
+      const canvasWrapper = document.getElementById('canvasWrapper');
+      const zoomLevelText = document.getElementById('zoomLevelText');
+      function updateZoom() {
+        canvasWrapper.style.transform = `scale(${state.zoom})`;
+        zoomLevelText.textContent = state.zoom === 1 ? '自适应' : `${Math.round(state.zoom * 100)}%`;
+      }
+      document.getElementById('zoomInBtn').addEventListener('click', () => {
+        state.zoom = Math.min(2.5, +(state.zoom + 0.25).toFixed(2));
+        updateZoom();
+      });
+      document.getElementById('zoomOutBtn').addEventListener('click', () => {
+        state.zoom = Math.max(0.5, +(state.zoom - 0.25).toFixed(2));
+        updateZoom();
+      });
+      document.getElementById('zoomFitBtn').addEventListener('click', () => {
+        state.zoom = 1;
+        updateZoom();
+      });
+
+      const compareBtn = document.getElementById('holdCompareBtn');
+      const startCompare = () => {
+        state.isComparingOriginal = true;
+        renderMainCanvas();
+      };
+      const endCompare = () => {
+        if (state.isComparingOriginal) {
+          state.isComparingOriginal = false;
+          renderMainCanvas();
+        }
+      };
+      compareBtn.addEventListener('mousedown', startCompare);
+      compareBtn.addEventListener('mouseup', endCompare);
+      compareBtn.addEventListener('mouseleave', endCompare);
+      compareBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startCompare(); });
+      compareBtn.addEventListener('touchend', endCompare);
+
+      // Right Inspector Tabs
+      const tabs = [
+        { btn: 'tabStitchBtn', panel: 'panelStitch' },
+        { btn: 'tabWatermarkBtn', panel: 'panelWatermark' },
+        { btn: 'tabPatternBtn', panel: 'panelPattern' }
+      ];
+      tabs.forEach(t => {
+        document.getElementById(t.btn).addEventListener('click', () => {
+          tabs.forEach(other => {
+            const active = other.btn === t.btn;
+            document.getElementById(other.panel).classList.toggle('hidden', !active);
+            document.getElementById(other.btn).className = active
+              ? 'py-2 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition'
+              : 'py-2 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition';
+          });
+        });
+      });
+
+      // Panel 1: Stitch & Layout Controls
+      document.querySelectorAll('.layout-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.layout = btn.dataset.layout;
+          state.workMode = state.layout === 'single' ? 'batch' : 'stitch';
+          syncControlsFromState();
+          renderQueueUI();
+          renderMainCanvas();
+        });
+      });
+
+      document.getElementById('subtitleRatioInput').addEventListener('input', (e) => {
+        state.subtitleRatio = parseInt(e.target.value, 10);
+        document.getElementById('subtitleRatioVal').textContent = `${state.subtitleRatio}%`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('sizeNormalizeSelect').addEventListener('change', (e) => {
+        state.sizeNormalize = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.getElementById('canvasPaddingInput').addEventListener('input', (e) => {
+        state.padding = parseInt(e.target.value, 10);
+        document.getElementById('paddingValText').textContent = `${state.padding} px`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('canvasGapInput').addEventListener('input', (e) => {
+        state.gap = parseInt(e.target.value, 10);
+        document.getElementById('gapValText').textContent = `${state.gap} px`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('imageRadiusInput').addEventListener('input', (e) => {
+        state.radius = parseInt(e.target.value, 10);
+        document.getElementById('radiusValText').textContent = `${state.radius} px`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('bgColorPicker').addEventListener('input', (e) => {
+        state.bgColor = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.querySelectorAll('.bg-swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+          state.bgColor = sw.dataset.bg;
+          if (state.bgColor !== 'transparent') {
+            document.getElementById('bgColorPicker').value = state.bgColor;
+          }
+          renderMainCanvas();
+        });
+      });
+
+      document.getElementById('cardShadowToggle').addEventListener('change', (e) => {
+        state.cardShadow = e.target.checked;
+        renderMainCanvas();
+      });
+
+      // Panel 2: Watermark Controls
+      document.getElementById('enableWatermarkToggle').addEventListener('change', (e) => {
+        state.enableWatermark = e.target.checked;
+        renderMainCanvas();
+      });
+
+      document.getElementById('watermarkTextInput').addEventListener('input', (e) => {
+        state.wmText = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.querySelectorAll('.wm-quick-tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag;
+          state.wmText = state.wmText ? `${state.wmText}\n${tag}` : tag;
+          document.getElementById('watermarkTextInput').value = state.wmText;
+          renderMainCanvas();
+        });
+      });
+
+      document.getElementById('insertDateTagBtn').addEventListener('click', () => {
+        const today = new Date().toISOString().slice(0, 10);
+        state.wmText = `${state.wmText} · ${today}`;
+        document.getElementById('watermarkTextInput').value = state.wmText;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmPlacementSelect').addEventListener('change', (e) => {
+        state.wmPlacement = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmInternalTextureSelect').addEventListener('change', (e) => {
+        state.wmInternalTexture = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmPillBoxToggle').addEventListener('change', (e) => {
+        state.wmPillBox = e.target.checked;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmDualStrokeToggle').addEventListener('change', (e) => {
+        state.wmDualStroke = e.target.checked;
+        renderMainCanvas();
+      });
+
+      // Logo PNG Upload
+      const logoInput = document.getElementById('logoWmUploadInput');
+      const clearLogoBtn = document.getElementById('clearLogoWmBtn');
+      const logoStatus = document.getElementById('logoWmStatusText');
+
+      logoInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            state.wmLogoImg = img;
+            logoStatus.textContent = file.name;
+            clearLogoBtn.classList.remove('hidden');
+            renderMainCanvas();
+            showToast('已加载自定义印章水印');
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      clearLogoBtn.addEventListener('click', () => {
+        state.wmLogoImg = null;
+        logoInput.value = '';
+        logoStatus.textContent = '未上传（默认使用文字+专属徽章）';
+        clearLogoBtn.classList.add('hidden');
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmColorPicker').addEventListener('input', (e) => {
+        state.wmColor = e.target.value;
+        document.getElementById('wmColorHexText').textContent = state.wmColor.toUpperCase();
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmBlendModeSelect').addEventListener('change', (e) => {
+        state.wmBlendMode = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmOpacityInput').addEventListener('input', (e) => {
+        state.wmOpacity = parseInt(e.target.value, 10);
+        document.getElementById('wmOpacityVal').textContent = `${state.wmOpacity}%`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmSizeInput').addEventListener('input', (e) => {
+        state.wmSize = parseInt(e.target.value, 10);
+        document.getElementById('wmSizeVal').textContent = `${state.wmSize} px`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmAngleInput').addEventListener('input', (e) => {
+        state.wmAngle = parseInt(e.target.value, 10);
+        document.getElementById('wmAngleVal').textContent = `${state.wmAngle}°`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('wmGapInput').addEventListener('input', (e) => {
+        state.wmGap = parseInt(e.target.value, 10);
+        document.getElementById('wmGapVal').textContent = `${state.wmGap} px`;
+        renderMainCanvas();
+      });
+
+      // Panel 3: Pattern Controls
+      document.getElementById('enablePatternToggle').addEventListener('change', (e) => {
+        state.enablePattern = e.target.checked;
+        renderMainCanvas();
+      });
+
+      document.querySelectorAll('.pattern-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.patternType = btn.dataset.pattern;
+          syncControlsFromState();
+          renderMainCanvas();
+        });
+      });
+
+      document.getElementById('patternColorPicker').addEventListener('input', (e) => {
+        state.patternColor = e.target.value;
+        renderMainCanvas();
+      });
+
+      document.getElementById('patternOpacityInput').addEventListener('input', (e) => {
+        state.patternOpacity = parseInt(e.target.value, 10);
+        document.getElementById('patternOpacityVal').textContent = `${state.patternOpacity}%`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('patternSpacingInput').addEventListener('input', (e) => {
+        state.patternSpacing = parseInt(e.target.value, 10);
+        document.getElementById('patternSpacingVal').textContent = `${state.patternSpacing} px`;
+        renderMainCanvas();
+      });
+
+      document.getElementById('patternStrokeInput').addEventListener('input', (e) => {
+        state.patternStroke = parseInt(e.target.value, 10) / 10;
+        document.getElementById('patternStrokeVal').textContent = `${state.patternStroke.toFixed(1)} px`;
+        renderMainCanvas();
+      });
+
+      // Presets (Desktop & Mobile)
+      document.getElementById('presetCommissionBtn').addEventListener('click', () => applyPreset('commission'));
+      document.getElementById('presetMerchBtn').addEventListener('click', () => applyPreset('merch'));
+      document.getElementById('presetComicBtn').addEventListener('click', () => applyPreset('comic'));
+      document.getElementById('presetGridBtn').addEventListener('click', () => applyPreset('grid'));
+
+      document.getElementById('mobilePresetCommBtn').addEventListener('click', () => applyPreset('commission'));
+      document.getElementById('mobilePresetMerchBtn').addEventListener('click', () => applyPreset('merch'));
+      document.getElementById('mobilePresetComicBtn').addEventListener('click', () => applyPreset('comic'));
+      document.getElementById('mobilePresetGridBtn').addEventListener('click', () => applyPreset('grid'));
+
+      // LocalStorage Save / Reset
+      document.getElementById('saveCustomPresetBtn').addEventListener('click', () => {
+        try {
+          const toSave = {
+            layout: state.layout,
+            padding: state.padding,
+            gap: state.gap,
+            radius: state.radius,
+            bgColor: state.bgColor,
+            wmText: state.wmText,
+            wmPlacement: state.wmPlacement,
+            wmInternalTexture: state.wmInternalTexture,
+            wmPillBox: state.wmPillBox,
+            wmDualStroke: state.wmDualStroke,
+            wmColor: state.wmColor,
+            wmBlendMode: state.wmBlendMode,
+            wmOpacity: state.wmOpacity,
+            wmSize: state.wmSize,
+            wmAngle: state.wmAngle,
+            wmGap: state.wmGap,
+            patternType: state.patternType,
+            patternColor: state.patternColor,
+            patternOpacity: state.patternOpacity,
+            patternSpacing: state.patternSpacing,
+            patternStroke: state.patternStroke
+          };
+          localStorage.setItem('yinji_studio_config', JSON.stringify(toSave));
+          showToast('已保存您的专属水印与底纹参数', 'success');
+        } catch (err) {
+          showToast('当前环境暂不支持本地存储');
+        }
+      });
+
+      document.getElementById('resetDefaultBtn').addEventListener('click', () => {
+        try {
+          localStorage.removeItem('yinji_studio_config');
+        } catch (err) {}
+        applyPreset('commission');
+      });
+
+      // Export Modal Controls
+      const exportModal = document.getElementById('exportModal');
+      document.getElementById('openExportModalBtn').addEventListener('click', () => {
+        exportModal.classList.remove('hidden');
+        exportModal.classList.add('flex');
+      });
+      document.getElementById('closeExportModalBtn').addEventListener('click', () => {
+        exportModal.classList.add('hidden');
+        exportModal.classList.remove('flex');
+      });
+      exportModal.addEventListener('click', (e) => {
+        if (e.target === exportModal) {
+          exportModal.classList.add('hidden');
+          exportModal.classList.remove('flex');
+        }
+      });
+
+      document.getElementById('downloadStitchedSingleBtn').addEventListener('click', exportStitchedSingle);
+      document.getElementById('downloadIndividualOneByOneBtn').addEventListener('click', exportIndividualOneByOne);
+      document.getElementById('downloadZipPackageBtn').addEventListener('click', exportAsZipPackage);
+    }
+
+    // Initialize App on Load
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        const saved = localStorage.getItem('yinji_studio_config');
+        if (saved) {
+          Object.assign(state, JSON.parse(saved));
+        }
+      } catch (err) {}
+      initEventListeners();
+      syncControlsFromState();
+      createSampleArtworks();
+    });
+  </script>
+</body>
+</html>

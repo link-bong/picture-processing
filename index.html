@@ -141,18 +141,29 @@
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white min-h-screen flex flex-col">
 
   <!-- Top Header -->
-  <header class="min-h-14 bg-white/95 backdrop-blur border-b border-slate-200 px-4 lg:px-6 py-2 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-30">
+  <header class="min-h-14 bg-white/95 backdrop-blur border-b border-slate-200 px-3 sm:px-4 lg:px-6 py-2 flex items-center justify-between gap-2 sticky top-0 z-30">
     <!-- Left: Global Preset Dropdown Bar -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-xs font-medium text-slate-500">全局预设</span>
-      <div class="w-44">
-        <select id="globalPresetSelect" class="w-full rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
-          <option value="">暂未选择预设</option>
-        </select>
+    <div class="relative flex flex-col gap-1.5 min-w-0">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-xs font-semibold text-slate-700 shrink-0">全局预设</span>
+        <div class="w-32 sm:w-44">
+          <select id="globalPresetSelect" class="w-full rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
+            <option value="">暂未选择预设</option>
+          </select>
+        </div>
+        <button type="button" id="addGlobalPresetBtn" title="新增预设" class="w-7 h-7 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center justify-center transition">＋</button>
+        <button type="button" id="renameGlobalPresetBtn" title="重命名预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">✎</button>
+        <button type="button" id="updateGlobalPresetBtn" title="更新当前预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">↻</button>
+        <button type="button" id="deleteGlobalPresetBtn" title="删除预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs flex items-center justify-center transition">✕</button>
       </div>
-      <button type="button" id="addGlobalPresetBtn" class="text-xs px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-medium transition">新增预设</button>
-      <button type="button" id="updateGlobalPresetBtn" class="hidden text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition">更新</button>
-      <button type="button" id="deleteGlobalPresetBtn" class="hidden text-xs px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 font-medium transition">删除</button>
+
+      <!-- Local Inline Input directly below Global Preset dropdown -->
+      <div id="globalPresetInputBar" class="hidden items-center gap-1.5 pt-1.5 border-t border-slate-200/70">
+        <span id="presetInputPromptLabel" class="hidden"></span>
+        <input id="globalPresetNameInput" type="text" placeholder="输入预设名称..." class="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button type="button" id="confirmAddGlobalPresetBtn" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shrink-0 transition">确定</button>
+        <button type="button" id="cancelAddGlobalPresetBtn" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shrink-0 transition">取消</button>
+      </div>
 
       <!-- Hidden compatibility nodes -->
       <div class="hidden">
@@ -160,6 +171,7 @@
         <div id="stitchPresetSlots"></div>
         <div id="wmPresetSlots"></div>
         <div id="patternPresetSlots"></div>
+        <span id="exportBadgeCount">0</span>
         <button type="button" id="saveToAlbumBtn">存入相册</button>
         <button type="button" id="presetCommissionBtn">约稿展示</button>
         <button type="button" id="presetMerchBtn">谷圈实拍</button>
@@ -172,25 +184,13 @@
       </div>
     </div>
 
-    <!-- Right Actions -->
-    <div class="flex items-center gap-2">
-      <button type="button" id="loadSampleBtn" class="text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition shadow-xs">
-        加载示例
-      </button>
-      <button type="button" id="openExportModalBtn" class="text-xs sm:text-sm px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition flex items-center gap-1.5 shadow-xs">
-        <span>导出</span>
-        <span id="exportBadgeCount" class="px-1.5 py-0.2 bg-indigo-500 rounded-md text-[11px]">0</span>
+    <!-- Right Action: Prominent Right-Aligned Export Button -->
+    <div class="flex items-center shrink-0 ml-auto">
+      <button type="button" id="openExportModalBtn" class="text-sm px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-semibold tracking-wide transition shadow-md shadow-blue-600/20">
+        导出
       </button>
     </div>
   </header>
-
-  <!-- Inline Preset Naming Bar -->
-  <div id="globalPresetInputBar" class="hidden bg-indigo-50/80 border-b border-indigo-100 px-4 lg:px-6 py-2.5 items-center gap-2">
-    <span id="presetInputPromptLabel" class="text-xs font-medium text-indigo-900">保存新预设：</span>
-    <input id="globalPresetNameInput" type="text" placeholder="输入预设名称" class="text-xs px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
-    <button type="button" id="confirmAddGlobalPresetBtn" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">确认保存</button>
-    <button type="button" id="cancelAddGlobalPresetBtn" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600">取消</button>
-  </div>
 
   <!-- Main Workspace -->
   <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-3.5rem)]">
@@ -201,6 +201,7 @@
         <div class="flex items-center justify-between mb-2.5">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">图片队列 (<span id="queueCountText">0</span>)</h2>
           <div class="flex items-center gap-1">
+            <button type="button" id="loadSampleBtn" class="text-xs text-slate-500 hover:text-indigo-600 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition">加载示例</button>
             <button type="button" id="reverseOrderBtn" class="text-xs text-slate-500 hover:text-indigo-600 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition" title="倒序排列">⇅ 倒序</button>
             <button type="button" id="clearAllBtn" class="text-xs text-rose-500 hover:text-rose-600 px-1.5 py-0.5 rounded-lg hover:bg-rose-50 transition">清空</button>
           </div>
@@ -291,18 +292,25 @@
 
           <!-- Dropdown Preset Bar for Stitch & Layout -->
           <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-1.5">
               <span class="text-xs font-semibold text-slate-700 shrink-0">排版预设</span>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <select id="stitchPresetSelect" class="w-full rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
                   <option value="">选择已保存的排版预设...</option>
                 </select>
               </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" id="addStitchPresetBtn" title="新增预设" class="w-7 h-7 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center justify-center transition">＋</button>
+                <button type="button" id="renameStitchPresetBtn" title="重命名预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">✎</button>
+                <button type="button" id="updateStitchPresetBtn" title="更新当前预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">↻</button>
+                <button type="button" id="deleteStitchPresetBtn" title="删除预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs flex items-center justify-center transition">✕</button>
+              </div>
             </div>
-            <div class="flex items-center justify-end gap-1.5">
-              <button type="button" id="addStitchPresetBtn" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">新增保存</button>
-              <button type="button" id="updateStitchPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition">更新当前</button>
-              <button type="button" id="deleteStitchPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-medium transition">删除</button>
+            <!-- Local Inline Input directly inside Stitch Preset Card -->
+            <div id="stitchPresetInputBox" class="hidden pt-2 border-t border-slate-200/70 items-center gap-1.5">
+              <input id="stitchPresetNameInput" type="text" placeholder="输入排版预设名称..." class="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="button" id="confirmStitchPresetBtn" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shrink-0 transition">确定</button>
+              <button type="button" id="cancelStitchPresetBtn" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shrink-0 transition">取消</button>
             </div>
           </div>
 
@@ -458,24 +466,31 @@
 
           <!-- Dropdown Preset Bar for Watermark -->
           <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-1.5">
               <span class="text-xs font-semibold text-slate-700 shrink-0">水印预设</span>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <select id="wmPresetSelect" class="w-full rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
                   <option value="">选择已保存的水印预设...</option>
                 </select>
               </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" id="addWmPresetBtn" title="新增预设" class="w-7 h-7 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center justify-center transition">＋</button>
+                <button type="button" id="renameWmPresetBtn" title="重命名预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">✎</button>
+                <button type="button" id="updateWmPresetBtn" title="更新当前预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">↻</button>
+                <button type="button" id="deleteWmPresetBtn" title="删除预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs flex items-center justify-center transition">✕</button>
+              </div>
             </div>
-            <div class="flex items-center justify-between gap-1.5">
+            <div class="flex items-center justify-between pt-0.5">
               <label class="inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
                 <input id="enableWatermarkToggle" type="checkbox" checked class="rounded text-indigo-600" />
                 <span>启用水印图层</span>
               </label>
-              <div class="flex items-center gap-1.5">
-                <button type="button" id="addWmPresetBtn" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">新增保存</button>
-                <button type="button" id="updateWmPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition">更新当前</button>
-                <button type="button" id="deleteWmPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-medium transition">删除</button>
-              </div>
+            </div>
+            <!-- Local Inline Input directly inside Watermark Preset Card -->
+            <div id="wmPresetInputBox" class="hidden pt-2 border-t border-slate-200/70 items-center gap-1.5">
+              <input id="wmPresetNameInput" type="text" placeholder="输入水印预设名称..." class="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="button" id="confirmWmPresetBtn" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shrink-0 transition">确定</button>
+              <button type="button" id="cancelWmPresetBtn" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shrink-0 transition">取消</button>
             </div>
           </div>
 
@@ -684,24 +699,31 @@
 
           <!-- Dropdown Preset Bar for Pattern -->
           <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-1.5">
               <span class="text-xs font-semibold text-slate-700 shrink-0">底纹预设</span>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <select id="patternPresetSelect" class="w-full rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white">
                   <option value="">选择已保存的底纹预设...</option>
                 </select>
               </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" id="addPatternPresetBtn" title="新增预设" class="w-7 h-7 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center justify-center transition">＋</button>
+                <button type="button" id="renamePatternPresetBtn" title="重命名预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">✎</button>
+                <button type="button" id="updatePatternPresetBtn" title="更新当前预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 text-xs flex items-center justify-center transition">↻</button>
+                <button type="button" id="deletePatternPresetBtn" title="删除预设" class="w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs flex items-center justify-center transition">✕</button>
+              </div>
             </div>
-            <div class="flex items-center justify-between gap-1.5">
+            <div class="flex items-center justify-between pt-0.5">
               <label class="inline-flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
                 <input id="enablePatternToggle" type="checkbox" checked class="rounded text-indigo-600" />
                 <span>启用全图底纹</span>
               </label>
-              <div class="flex items-center gap-1.5">
-                <button type="button" id="addPatternPresetBtn" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">新增保存</button>
-                <button type="button" id="updatePatternPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition">更新当前</button>
-                <button type="button" id="deletePatternPresetBtn" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-medium transition">删除</button>
-              </div>
+            </div>
+            <!-- Local Inline Input directly inside Pattern Preset Card -->
+            <div id="patternPresetInputBox" class="hidden pt-2 border-t border-slate-200/70 items-center gap-1.5">
+              <input id="patternPresetNameInput" type="text" placeholder="输入底纹预设名称..." class="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="button" id="confirmPatternPresetBtn" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shrink-0 transition">确定</button>
+              <button type="button" id="cancelPatternPresetBtn" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shrink-0 transition">取消</button>
             </div>
           </div>
 
@@ -2279,29 +2301,6 @@
       populatePresetDropdown('stitchPresetSelect', state.stitchPresetsList || [], '选择排版预设');
       populatePresetDropdown('wmPresetSelect', state.wmPresetsList || [], '选择水印预设');
       populatePresetDropdown('patternPresetSelect', state.patternPresetsList || [], '选择底纹预设');
-
-      const hasGlobalSelected = document.getElementById('globalPresetSelect').value !== '';
-      document.getElementById('updateGlobalPresetBtn').classList.toggle('hidden', !hasGlobalSelected);
-      document.getElementById('deleteGlobalPresetBtn').classList.toggle('hidden', !hasGlobalSelected);
-    }
-
-    function openPresetNameDrawer(targetType, defaultName) {
-      pendingPresetTarget = targetType;
-      const bar = document.getElementById('globalPresetInputBar');
-      const promptLabel = document.getElementById('presetInputPromptLabel');
-      const input = document.getElementById('globalPresetNameInput');
-
-      const typeNames = {
-        global: '保存全局预设：',
-        stitch: '保存拼接排版预设：',
-        wm: '保存原创水印预设：',
-        pattern: '保存底纹防盗预设：'
-      };
-      promptLabel.textContent = typeNames[targetType] || '保存新预设：';
-      input.value = defaultName;
-      bar.classList.remove('hidden');
-      bar.classList.add('flex');
-      input.focus();
     }
 
     // =========================================================================
@@ -2819,201 +2818,203 @@
         showToast('已加载 3 张示例作品');
       });
 
-      // Unified Dropdown Presets Handlers
-      const presetInputBar = document.getElementById('globalPresetInputBar');
-      const presetNameInput = document.getElementById('globalPresetNameInput');
+      // Unified Local Preset Controllers (Each card has its own local inline input for Add & Rename)
+      function bindLocalPresetController(cfg) {
+        const selectEl = document.getElementById(cfg.selectId);
+        const addBtn = document.getElementById(cfg.addBtnId);
+        const renameBtn = document.getElementById(cfg.renameBtnId);
+        const updateBtn = document.getElementById(cfg.updateBtnId);
+        const deleteBtn = document.getElementById(cfg.deleteBtnId);
+        const inputBox = document.getElementById(cfg.inputBoxId);
+        const nameInput = document.getElementById(cfg.nameInputId);
+        const confirmBtn = document.getElementById(cfg.confirmBtnId);
+        const cancelBtn = document.getElementById(cfg.cancelBtnId);
 
-      document.getElementById('cancelAddGlobalPresetBtn').addEventListener('click', () => {
-        presetInputBar.classList.add('hidden');
-        presetInputBar.classList.remove('flex');
-      });
+        let mode = 'add'; // 'add' | 'rename'
 
-      document.getElementById('confirmAddGlobalPresetBtn').addEventListener('click', () => {
-        const name = (presetNameInput.value || '').trim() || '自定义预设';
-        if (pendingPresetTarget === 'global') {
-          state.globalPresets.push({
-            name,
-            data: {
-              ...getStitchConfigSnapshot(),
-              ...getWmConfigSnapshot(),
-              ...getPatternConfigSnapshot()
+        function openInputBox(targetMode, initialValue) {
+          mode = targetMode;
+          nameInput.value = initialValue;
+          inputBox.classList.remove('hidden');
+          inputBox.classList.add('flex');
+          nameInput.focus();
+          nameInput.select();
+        }
+
+        function closeInputBox() {
+          inputBox.classList.add('hidden');
+          inputBox.classList.remove('flex');
+        }
+
+        function submitInputBox() {
+          const list = state[cfg.listKey];
+          const trimmed = (nameInput.value || '').trim() || `${cfg.defaultPrefix} ${list.length + 1}`;
+          if (mode === 'add') {
+            const entry = cfg.isGlobal
+              ? { name: trimmed, data: cfg.getSnapshot() }
+              : { name: trimmed, config: cfg.getSnapshot() };
+            list.push(entry);
+            refreshAllPresetDropdowns();
+            selectEl.value = String(list.length - 1);
+            refreshAllCustomSelects();
+            persistAllToStorage();
+            closeInputBox();
+            showToast(`已保存${cfg.defaultPrefix}：${trimmed}`);
+          } else {
+            const idx = parseInt(selectEl.value, 10);
+            if (!isNaN(idx) && list[idx]) {
+              list[idx].name = trimmed;
+              refreshAllPresetDropdowns();
+              selectEl.value = String(idx);
+              refreshAllCustomSelects();
+              persistAllToStorage();
+              closeInputBox();
+              showToast(`已重命名为：${trimmed}`);
             }
-          });
-          refreshAllPresetDropdowns();
-          document.getElementById('globalPresetSelect').value = String(state.globalPresets.length - 1);
-          refreshAllPresetDropdowns();
-        } else if (pendingPresetTarget === 'stitch') {
-          state.stitchPresetsList.push({ name, config: getStitchConfigSnapshot() });
-          refreshAllPresetDropdowns();
-          document.getElementById('stitchPresetSelect').value = String(state.stitchPresetsList.length - 1);
-          refreshAllCustomSelects();
-        } else if (pendingPresetTarget === 'wm') {
-          state.wmPresetsList.push({ name, config: getWmConfigSnapshot() });
-          refreshAllPresetDropdowns();
-          document.getElementById('wmPresetSelect').value = String(state.wmPresetsList.length - 1);
-          refreshAllCustomSelects();
-        } else if (pendingPresetTarget === 'pattern') {
-          state.patternPresetsList.push({ name, config: getPatternConfigSnapshot() });
-          refreshAllPresetDropdowns();
-          document.getElementById('patternPresetSelect').value = String(state.patternPresetsList.length - 1);
-          refreshAllCustomSelects();
+          }
         }
-        presetInputBar.classList.add('hidden');
-        presetInputBar.classList.remove('flex');
-        persistAllToStorage();
-        showToast(`已保存预设：${name}`);
+
+        selectEl.addEventListener('change', (e) => {
+          const list = state[cfg.listKey];
+          const idx = parseInt(e.target.value, 10);
+          if (!isNaN(idx) && list[idx]) {
+            const snap = cfg.isGlobal ? list[idx].data : list[idx].config;
+            Object.assign(state, JSON.parse(JSON.stringify(snap)));
+            syncControlsFromState();
+            selectEl.value = String(idx);
+            refreshAllCustomSelects();
+            persistAllToStorage();
+            renderMainCanvas();
+            showToast(`已应用${cfg.defaultPrefix}：${list[idx].name}`);
+          }
+        });
+
+        addBtn.addEventListener('click', () => {
+          const list = state[cfg.listKey] || [];
+          openInputBox('add', `${cfg.defaultPrefix} ${list.length + 1}`);
+        });
+
+        renameBtn.addEventListener('click', () => {
+          const list = state[cfg.listKey] || [];
+          const idx = parseInt(selectEl.value, 10);
+          if (isNaN(idx) || !list[idx]) {
+            showToast(`请先在下拉框中选择要重命名的${cfg.defaultPrefix}`);
+            return;
+          }
+          openInputBox('rename', list[idx].name);
+        });
+
+        updateBtn.addEventListener('click', () => {
+          const list = state[cfg.listKey] || [];
+          const idx = parseInt(selectEl.value, 10);
+          if (!isNaN(idx) && list[idx]) {
+            if (cfg.isGlobal) {
+              list[idx].data = cfg.getSnapshot();
+            } else {
+              list[idx].config = cfg.getSnapshot();
+            }
+            persistAllToStorage();
+            showToast(`已更新${cfg.defaultPrefix}：${list[idx].name}`);
+          } else {
+            openInputBox('add', `${cfg.defaultPrefix} ${list.length + 1}`);
+          }
+        });
+
+        deleteBtn.addEventListener('click', () => {
+          const list = state[cfg.listKey] || [];
+          const idx = parseInt(selectEl.value, 10);
+          if (isNaN(idx) || !list[idx]) {
+            showToast(`请先选择要删除的${cfg.defaultPrefix}`);
+            return;
+          }
+          const removedName = list[idx].name;
+          list.splice(idx, 1);
+          selectEl.value = '';
+          closeInputBox();
+          persistAllToStorage();
+          refreshAllPresetDropdowns();
+          refreshAllCustomSelects();
+          showToast(`已删除预设：${removedName}`);
+        });
+
+        confirmBtn.addEventListener('click', submitInputBox);
+        cancelBtn.addEventListener('click', closeInputBox);
+        nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitInputBox();
+          } else if (e.key === 'Escape') {
+            closeInputBox();
+          }
+        });
+      }
+
+      bindLocalPresetController({
+        selectId: 'globalPresetSelect',
+        addBtnId: 'addGlobalPresetBtn',
+        renameBtnId: 'renameGlobalPresetBtn',
+        updateBtnId: 'updateGlobalPresetBtn',
+        deleteBtnId: 'deleteGlobalPresetBtn',
+        inputBoxId: 'globalPresetInputBar',
+        nameInputId: 'globalPresetNameInput',
+        confirmBtnId: 'confirmAddGlobalPresetBtn',
+        cancelBtnId: 'cancelAddGlobalPresetBtn',
+        listKey: 'globalPresets',
+        defaultPrefix: '全局预设',
+        isGlobal: true,
+        getSnapshot: () => ({
+          ...getStitchConfigSnapshot(),
+          ...getWmConfigSnapshot(),
+          ...getPatternConfigSnapshot()
+        })
       });
 
-      // 1. Global Preset Dropdown
-      document.getElementById('globalPresetSelect').addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        if (!isNaN(idx) && state.globalPresets[idx]) {
-          Object.assign(state, JSON.parse(JSON.stringify(state.globalPresets[idx].data)));
-          syncControlsFromState();
-          document.getElementById('globalPresetSelect').value = String(idx);
-          refreshAllPresetDropdowns();
-          persistAllToStorage();
-          renderMainCanvas();
-          showToast(`已应用全局预设：${state.globalPresets[idx].name}`);
-        } else {
-          refreshAllPresetDropdowns();
-        }
-      });
-      document.getElementById('addGlobalPresetBtn').addEventListener('click', () => {
-        openPresetNameDrawer('global', `全局预设 ${(state.globalPresets || []).length + 1}`);
-      });
-      document.getElementById('updateGlobalPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('globalPresetSelect').value, 10);
-        if (!isNaN(idx) && state.globalPresets[idx]) {
-          state.globalPresets[idx].data = {
-            ...getStitchConfigSnapshot(),
-            ...getWmConfigSnapshot(),
-            ...getPatternConfigSnapshot()
-          };
-          persistAllToStorage();
-          showToast(`已更新预设：${state.globalPresets[idx].name}`);
-        }
-      });
-      document.getElementById('deleteGlobalPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('globalPresetSelect').value, 10);
-        if (!isNaN(idx) && state.globalPresets[idx]) {
-          state.globalPresets.splice(idx, 1);
-          document.getElementById('globalPresetSelect').value = '';
-          persistAllToStorage();
-          refreshAllPresetDropdowns();
-          showToast('已删除该全局预设');
-        }
+      bindLocalPresetController({
+        selectId: 'stitchPresetSelect',
+        addBtnId: 'addStitchPresetBtn',
+        renameBtnId: 'renameStitchPresetBtn',
+        updateBtnId: 'updateStitchPresetBtn',
+        deleteBtnId: 'deleteStitchPresetBtn',
+        inputBoxId: 'stitchPresetInputBox',
+        nameInputId: 'stitchPresetNameInput',
+        confirmBtnId: 'confirmStitchPresetBtn',
+        cancelBtnId: 'cancelStitchPresetBtn',
+        listKey: 'stitchPresetsList',
+        defaultPrefix: '排版预设',
+        isGlobal: false,
+        getSnapshot: getStitchConfigSnapshot
       });
 
-      // 2. Stitch Preset Dropdown
-      document.getElementById('stitchPresetSelect').addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        if (!isNaN(idx) && state.stitchPresetsList[idx]) {
-          Object.assign(state, JSON.parse(JSON.stringify(state.stitchPresetsList[idx].config)));
-          syncControlsFromState();
-          document.getElementById('stitchPresetSelect').value = String(idx);
-          refreshAllCustomSelects();
-          persistAllToStorage();
-          renderMainCanvas();
-          showToast(`已应用排版预设：${state.stitchPresetsList[idx].name}`);
-        }
-      });
-      document.getElementById('addStitchPresetBtn').addEventListener('click', () => {
-        openPresetNameDrawer('stitch', `排版预设 ${(state.stitchPresetsList || []).length + 1}`);
-      });
-      document.getElementById('updateStitchPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('stitchPresetSelect').value, 10);
-        if (!isNaN(idx) && state.stitchPresetsList[idx]) {
-          state.stitchPresetsList[idx].config = getStitchConfigSnapshot();
-          persistAllToStorage();
-          showToast(`已更新排版预设：${state.stitchPresetsList[idx].name}`);
-        } else {
-          openPresetNameDrawer('stitch', `排版预设 ${(state.stitchPresetsList || []).length + 1}`);
-        }
-      });
-      document.getElementById('deleteStitchPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('stitchPresetSelect').value, 10);
-        if (!isNaN(idx) && state.stitchPresetsList[idx]) {
-          state.stitchPresetsList.splice(idx, 1);
-          document.getElementById('stitchPresetSelect').value = '';
-          persistAllToStorage();
-          refreshAllPresetDropdowns();
-          showToast('已删除该排版预设');
-        }
+      bindLocalPresetController({
+        selectId: 'wmPresetSelect',
+        addBtnId: 'addWmPresetBtn',
+        renameBtnId: 'renameWmPresetBtn',
+        updateBtnId: 'updateWmPresetBtn',
+        deleteBtnId: 'deleteWmPresetBtn',
+        inputBoxId: 'wmPresetInputBox',
+        nameInputId: 'wmPresetNameInput',
+        confirmBtnId: 'confirmWmPresetBtn',
+        cancelBtnId: 'cancelWmPresetBtn',
+        listKey: 'wmPresetsList',
+        defaultPrefix: '水印预设',
+        isGlobal: false,
+        getSnapshot: getWmConfigSnapshot
       });
 
-      // 3. Watermark Preset Dropdown
-      document.getElementById('wmPresetSelect').addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        if (!isNaN(idx) && state.wmPresetsList[idx]) {
-          Object.assign(state, JSON.parse(JSON.stringify(state.wmPresetsList[idx].config)));
-          syncControlsFromState();
-          document.getElementById('wmPresetSelect').value = String(idx);
-          refreshAllCustomSelects();
-          persistAllToStorage();
-          renderMainCanvas();
-          showToast(`已应用水印预设：${state.wmPresetsList[idx].name}`);
-        }
-      });
-      document.getElementById('addWmPresetBtn').addEventListener('click', () => {
-        openPresetNameDrawer('wm', `水印预设 ${(state.wmPresetsList || []).length + 1}`);
-      });
-      document.getElementById('updateWmPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('wmPresetSelect').value, 10);
-        if (!isNaN(idx) && state.wmPresetsList[idx]) {
-          state.wmPresetsList[idx].config = getWmConfigSnapshot();
-          persistAllToStorage();
-          showToast(`已更新水印预设：${state.wmPresetsList[idx].name}`);
-        } else {
-          openPresetNameDrawer('wm', `水印预设 ${(state.wmPresetsList || []).length + 1}`);
-        }
-      });
-      document.getElementById('deleteWmPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('wmPresetSelect').value, 10);
-        if (!isNaN(idx) && state.wmPresetsList[idx]) {
-          state.wmPresetsList.splice(idx, 1);
-          document.getElementById('wmPresetSelect').value = '';
-          persistAllToStorage();
-          refreshAllPresetDropdowns();
-          showToast('已删除该水印预设');
-        }
-      });
-
-      // 4. Pattern Preset Dropdown
-      document.getElementById('patternPresetSelect').addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        if (!isNaN(idx) && state.patternPresetsList[idx]) {
-          Object.assign(state, JSON.parse(JSON.stringify(state.patternPresetsList[idx].config)));
-          syncControlsFromState();
-          document.getElementById('patternPresetSelect').value = String(idx);
-          refreshAllCustomSelects();
-          persistAllToStorage();
-          renderMainCanvas();
-          showToast(`已应用底纹预设：${state.patternPresetsList[idx].name}`);
-        }
-      });
-      document.getElementById('addPatternPresetBtn').addEventListener('click', () => {
-        openPresetNameDrawer('pattern', `底纹预设 ${(state.patternPresetsList || []).length + 1}`);
-      });
-      document.getElementById('updatePatternPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('patternPresetSelect').value, 10);
-        if (!isNaN(idx) && state.patternPresetsList[idx]) {
-          state.patternPresetsList[idx].config = getPatternConfigSnapshot();
-          persistAllToStorage();
-          showToast(`已更新底纹预设：${state.patternPresetsList[idx].name}`);
-        } else {
-          openPresetNameDrawer('pattern', `底纹预设 ${(state.patternPresetsList || []).length + 1}`);
-        }
-      });
-      document.getElementById('deletePatternPresetBtn').addEventListener('click', () => {
-        const idx = parseInt(document.getElementById('patternPresetSelect').value, 10);
-        if (!isNaN(idx) && state.patternPresetsList[idx]) {
-          state.patternPresetsList.splice(idx, 1);
-          document.getElementById('patternPresetSelect').value = '';
-          persistAllToStorage();
-          refreshAllPresetDropdowns();
-          showToast('已删除该底纹预设');
-        }
+      bindLocalPresetController({
+        selectId: 'patternPresetSelect',
+        addBtnId: 'addPatternPresetBtn',
+        renameBtnId: 'renamePatternPresetBtn',
+        updateBtnId: 'updatePatternPresetBtn',
+        deleteBtnId: 'deletePatternPresetBtn',
+        inputBoxId: 'patternPresetInputBox',
+        nameInputId: 'patternPresetNameInput',
+        confirmBtnId: 'confirmPatternPresetBtn',
+        cancelBtnId: 'cancelPatternPresetBtn',
+        listKey: 'patternPresetsList',
+        defaultPrefix: '底纹预设',
+        isGlobal: false,
+        getSnapshot: getPatternConfigSnapshot
       });
 
       // Work Mode Switcher
